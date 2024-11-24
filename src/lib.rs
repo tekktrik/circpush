@@ -1,6 +1,6 @@
-mod client;
 mod commands;
-mod server;
+mod tcp;
+
 
 use pyo3::prelude::*;
 
@@ -16,13 +16,13 @@ pub mod circpush {
 
         #[pyfunction]
         pub fn start() -> PyResult<()> {
-            crate::server::start_server();
+            crate::tcp::server::start_server();
             Ok(())
         }
 
         #[pyfunction]
         pub fn run() -> PyResult<()> {
-            crate::server::run_server();
+            crate::tcp::server::run_server();
             Ok(())
         }
     }
@@ -36,7 +36,7 @@ pub mod circpush {
 
         #[pyfunction]
         pub fn ping() -> PyResult<&'static str> {
-            match crate::client::ping() {
+            match crate::tcp::client::ping() {
                 Ok(t) => Ok(t),
                 Err(e) => Err(PyRuntimeError::new_err(e)),
             }
@@ -44,7 +44,7 @@ pub mod circpush {
 
         #[pyfunction]
         pub fn echo(message: String) -> PyResult<String> {
-            match crate::client::echo(message) {
+            match crate::tcp::client::echo(message) {
                 Ok(t) => Ok(t),
                 Err(e) => Err(PyRuntimeError::new_err(e)),
             }
@@ -52,7 +52,7 @@ pub mod circpush {
 
         #[pyfunction]
         pub fn stop_server() -> PyResult<&'static str> {
-            match crate::client::stop_server() {
+            match crate::tcp::client::stop_server() {
                 Ok(t) => Ok(t),
                 Err(e) => Err(PyRuntimeError::new_err(e)),
             }
