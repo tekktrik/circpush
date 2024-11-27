@@ -1,8 +1,11 @@
+use std::borrow::Cow;
 use std::fs::create_dir_all;
 use std::hash::Hash;
 use std::path::{Path, PathBuf};
 use std::fs;
 use filetime::{FileTime, set_file_mtime};
+use tabled::Tabled;
+use serde::{Serialize, Deserialize};
 
 
 fn get_file_mtime(path: &PathBuf) -> i64 {
@@ -28,10 +31,24 @@ pub enum FileUpdateError {
     UpdateTimeError,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct FileLink {
     pub source: PathBuf,
     pub destination: PathBuf,
+}
+
+impl Tabled for FileLink {
+    const LENGTH: usize = 2;
+
+    fn fields(&self) -> Vec<std::borrow::Cow<'_, str>> {
+        let source_str = self.source.to_str().expect("Could not convert source to string");
+        let destination_str = self.destination.to_str().expect("Could not convert destination to string");
+        vec![Cow::Borrowed(source_str), Cow::Borrowed(destination_str)]
+    }
+
+    fn headers() -> Vec<std::borrow::Cow<'static, str>> {
+        vec![Cow::Borrowed("Source"), Cow::Borrowed("Destination")]
+    }
 }
 
 impl FileLink {
@@ -69,13 +86,6 @@ impl FileLink {
     }
     
     pub fn is_outdated(&self) -> bool {
-        // match self.last_updated {
-        //     Some(last_update) => {
-        //         let modtime = get_file_mtime(&self.source);
-        //         Some(modtime > last_update)
-        //     },
-        //     None => None,
-        // }
         if !self.destination.exists() { return true; }
         let source_mtime = get_file_mtime(&self.source);
         let destination_mtime = get_file_mtime(&self.destination);

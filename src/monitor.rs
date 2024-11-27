@@ -3,6 +3,7 @@ use crate::link::FileLink;
 use glob::{glob, Paths};
 use pathdiff::diff_paths;
 use serde::{Deserialize, Serialize};
+use tabled::{Table, Tabled};
 
 
 #[derive(Debug)]
@@ -25,9 +26,22 @@ pub struct FileMonitor {
     links: HashSet<FileLink>,
 }
 
+// impl Tabled for FileMonitor {
+
+//     const LENGTH: usize = 3;
+
+//     fn fields(&self) -> Vec<std::borrow::Cow<'_, str>> {
+//         todo!()
+//     }
+
+//     fn headers() -> Vec<std::borrow::Cow<'static, str>> {
+//         Table::builder(iter).index()
+//     }
+// }
+
 impl FileMonitor {
 
-    pub fn new(read_pattern: String, write_directory: String, base_directory: String) -> Result<Self, PathError> {
+    pub fn new(read_pattern: String, write_directory: PathBuf, base_directory: PathBuf) -> Result<Self, PathError> {
         let base_directory = match absolute(Path::new(&base_directory)) {
             Ok(abspath) => {abspath.to_path_buf()},
             Err(_) => return Err(PathError::NoAbsolute),
@@ -107,6 +121,18 @@ impl FileMonitor {
 
     pub fn deserialize(text: &str) -> Self {
         serde_json::from_str(text).expect("Could not deserialize FileMonitor")
+    }
+
+    pub fn to_table_record(&self) -> Vec<String> {
+        vec![
+            self.read_pattern.to_owned(),
+            String::from(self.base_directory.to_str().expect("Could not convert base directory to String")),
+            String::from(self.write_directory.to_str().expect("Could not convert write directory to String")),
+        ]
+    }
+
+    pub fn table_header() -> Vec<&'static str> {
+        vec!["Read Pattern", "Base Directory", "Write Directory"]
     }
 
 }
