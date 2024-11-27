@@ -129,7 +129,7 @@ pub fn run_server() -> String{
             }
             Err(_e) => panic!("Could not accept incoming connection"),
         }
-        // sleep(sleep_duration); // TODO: Remove later?
+        sleep(sleep_duration); // TODO: Remove later?
     }
     String::from("Server process ended")
 }
