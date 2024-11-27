@@ -25,7 +25,7 @@ classifiers = [
 dynamic = ["version", "dependencies", "optional-dependencies"]
 
 [project.scripts]
-circpush = "circpush.cli:cli"
+circpush = "circpush:cli"
 
 [tool.setuptools]
 packages = ["circpush"]
