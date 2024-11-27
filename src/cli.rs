@@ -29,18 +29,22 @@ enum Command {
     Server(ServerCommand),
     Ping,
     Echo { text: String},
+    #[command(name = "start")]
     LinkStart {
         read_pattern: String,
         write_directory: PathBuf,   
     },
+    #[command(name = "stop")]
     LinkStop {
         #[arg(default_value_t = 0)]
         number: usize
     },
+    #[command(name = "view")]
     LinkView {
         #[arg(default_value_t = 0)]
         number: usize
     },
+    #[command(name = "ledger")]
     LinkLedger,
 }
 
