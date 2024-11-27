@@ -4,7 +4,6 @@ use std::io::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::time::Duration;
 
-#[allow(dead_code)]
 fn open_connection() -> TcpStream {
     let localhost_addr_v4 = Ipv4Addr::LOCALHOST;
     let localhost_addr = IpAddr::V4(localhost_addr_v4);
@@ -26,10 +25,6 @@ fn communicate(request: Request) -> Response {
         .expect("Could not write request");
     let mut serialization = serde_json::Deserializer::from_reader(&stream);
     Response::deserialize(&mut serialization).expect("Could not deserialize the response")
-    // match Response::deserialize(&mut serialization) {
-    //     Ok(response) => Ok(response),
-    //     Err(e) => Some(3)
-    // }
 }
 
 pub fn ping() -> Result<&'static str, &'static str> {
@@ -42,13 +37,34 @@ pub fn ping() -> Result<&'static str, &'static str> {
 pub fn echo(message: String) -> Result<String, &'static str> {
     match communicate(Request::Echo { msg: message }) {
         Response::Message { msg } => Ok(msg),
-        _ => Err("ERROR: Did not receive expected echoresponse"),
+        _ => Err("ERROR: Did not receive expected echo response"),
     }
 }
 
 pub fn stop_server() -> Result<&'static str, &'static str> {
     match communicate(Request::Shutdown) {
         Response::Message { msg } if msg == STOP_RESPONSE => Ok("Server shutdown"),
-        _ => Err("ERROR: Did not receive expected echoresponse"),
+        _ => Err("ERROR: Did not receive expected response"),
+    }
+}
+
+pub fn start_link(read_pattern: String, write_directory: String, base_directory: String) -> Result<&'static str, &'static str>{
+    match communicate(Request::StartLink { read_pattern, write_directory, base_directory }) {
+        Response::NoData => Ok("Link started!"),
+        _ => Err("ERROR: Could not start link")
+    }
+}
+
+pub fn stop_link(number: usize) -> Result<String, &'static str> {
+    match communicate(Request::StopLink { number }) {
+        Response::Message { msg }=> Ok(msg),
+        _ => Err("ERROR: Could not stop link"),
+    }
+}
+
+pub fn view_link(number: usize) -> Result<String, &'static str> {
+    match communicate(Request::ViewLink { number }) {
+        Response::Links { json } => Ok(json),
+        _ => Err("ERROR: Could not retrieve link"),
     }
 }

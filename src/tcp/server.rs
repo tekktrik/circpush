@@ -1,4 +1,5 @@
 use crate::commands::{Request, Response, STOP_RESPONSE};
+use crate::monitor::FileMonitor;
 use serde::Deserialize;
 use std::io::{prelude::*, ErrorKind};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
@@ -6,6 +7,7 @@ use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::thread::sleep;
 use std::time::Duration;
+use std::ops::Index;
 
 #[cfg(target_family = "unix")]
 pub fn start_server() {
@@ -19,7 +21,7 @@ pub fn start_server() {
 }
 
 #[cfg(target_family = "windows")]
-pub fn start_server() {
+pub fn start_server(verbose: bool) {
     use std::os::windows::process::CommandExt;
     use windows_sys::Win32::System::Threading::{CREATE_NEW_PROCESS_GROUP, DETACHED_PROCESS};
     Command::new("circpush")
@@ -42,7 +44,7 @@ fn bind_socket() -> TcpListener {
     listener
 }
 
-fn handle_connection(mut stream: TcpStream) -> bool {
+fn handle_connection(mut stream: TcpStream, monitors: &mut Vec<FileMonitor>) -> bool {
     let mut serialization = serde_json::Deserializer::from_reader(&stream);
     let request =
         Request::deserialize(&mut serialization).expect("Unable to deserialize the request");
@@ -51,6 +53,44 @@ fn handle_connection(mut stream: TcpStream) -> bool {
         Request::Echo { msg } => Response::Message { msg: msg.clone() },
         Request::Shutdown => Response::Message {
             msg: String::from_str(STOP_RESPONSE).unwrap(),
+        },
+        Request::StartLink {read_pattern, write_directory, base_directory } => {
+            let new_monitor = FileMonitor::new(
+                read_pattern.clone(),
+                write_directory.clone(),
+                base_directory.clone(),
+            ).expect("Path error occurred!");
+            monitors.push(new_monitor);
+            Response::NoData
+        }
+        Request::StopLink { number} => {
+            if *number == 0 {
+                monitors.clear();
+                Response::Message { msg: String::from("All links cleared!") }
+            }
+            else if *number > monitors.len() {
+                Response::ErrorMessage { msg: String::from("This link does not exist!") }
+            }
+            else {
+                let index = number - 1;
+                monitors.remove(index);
+                Response::Message { msg: String::from("Link removed!") }
+            }
+        },
+        Request::ViewLink { number} => {
+            if *number == 0 {
+                let all_monitors_json = serde_json::to_string(&monitors).expect("Could not convert FileMonitors to JSON");
+                Response::Links { json: all_monitors_json }
+            }
+            else if *number > monitors.len() {
+                Response::ErrorMessage { msg: String::from("This link does not exist!") }
+            }
+            else {
+                let index = number - 1;
+                let specific_monitor = monitors.index(index);
+                let monitor_json = serde_json::to_string(specific_monitor).expect("Could not convert the link to JSON");
+                Response::Links { json: monitor_json }
+            }
         },
     };
     let raw_response = serde_json::to_string(&response).expect("Could not serialize the response");
@@ -63,16 +103,19 @@ fn handle_connection(mut stream: TcpStream) -> bool {
 pub fn run_server() {
     let listener = bind_socket();
     let sleep_duration = Duration::from_millis(10);
+    let mut monitors: Vec<FileMonitor> = Vec::new();
     for connection in listener.incoming() {
         match connection {
             Ok(stream) => {
-                let keep_running = handle_connection(stream);
+                let keep_running = handle_connection(stream, &mut monitors);
                 if !keep_running {
                     return;
                 }
             }
             Err(e) if e.kind() == ErrorKind::WouldBlock => {
-                // TODO: Move on to file updates
+                for monitor in &mut monitors {
+                    monitor.update_links().expect("Could not update links");
+                }
             }
             Err(_e) => panic!("Could not accept incoming connection"),
         }
