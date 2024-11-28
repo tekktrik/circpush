@@ -56,7 +56,7 @@ pub fn echo(message: String) -> Result<String, String> {
 
 pub fn stop_server() -> Result<String, String> {
     match communicate(Request::Shutdown) {
-        Ok(Response::Message { msg }) if msg == STOP_RESPONSE => Ok(String::from("Server shutdown")),
+        Ok(Response::Message { msg }) if msg == STOP_RESPONSE => Ok(format!("Server on port {PORT} shutdown")),
         Err(error) => Err(error),
         _ => Err(String::from("ERROR: Did not receive expected response")),
     }
