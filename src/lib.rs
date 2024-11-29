@@ -3,6 +3,7 @@ mod link;
 mod tcp;
 mod monitor;
 mod cli;
+mod board;
 
 use pyo3::prelude::*;
 use std::process::exit;

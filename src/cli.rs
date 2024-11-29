@@ -3,6 +3,8 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
+use crate::board::find_circuitpy;
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -17,12 +19,6 @@ enum ServerCommand {
     Stop,
 }
 
-// #[derive(Args)]
-// struct LinkStartArgs {
-//     read_pattern: String,
-//     write_directory: PathBuf,
-// }
-
 #[derive(Subcommand)]
 enum Command {
     #[command(subcommand)]
@@ -32,7 +28,8 @@ enum Command {
     #[command(name = "start")]
     LinkStart {
         read_pattern: String,
-        write_directory: PathBuf,   
+        #[arg(short, long, value_name = "PATH")]
+        path: Option<PathBuf>,   
     },
     #[command(name = "stop")]
     LinkStop {
@@ -56,10 +53,16 @@ pub fn entry() -> Result<String, String> {
         Command::Server(server_command) => server_subentry(server_command),
         Command::Ping => crate::tcp::client::ping(),
         Command::Echo { text } => crate::tcp::client::echo(text),
-        Command::LinkStart { read_pattern, write_directory } => {
+        Command::LinkStart { read_pattern, mut path } => {
+            if path.is_none() {
+                path = find_circuitpy();
+            }
+            if path.is_none() {
+                return Err(String::from("Could not locate a connected CircuitPython board"));
+            }
             crate::tcp::client::start_link(
                 read_pattern,
-                write_directory,
+                path.unwrap(),
                 env::current_dir().expect("Could not get the current directory"),
             )
         },
