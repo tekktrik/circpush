@@ -1,6 +1,8 @@
 use crate::commands::{Request, Response, STOP_RESPONSE};
 use crate::monitor::FileMonitor;
 use serde::Deserialize;
+use std::borrow::Borrow;
+use std::collections::HashSet;
 use std::io::{prelude::*, ErrorKind};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::process::{Command, Stdio};
@@ -111,7 +113,7 @@ fn handle_connection(mut stream: TcpStream, monitors: &mut Vec<FileMonitor>) -> 
     !matches!(&request, Request::Shutdown)
 }
 
-pub fn run_server() -> String{
+pub fn run_server() -> String {
     let listener = bind_socket();
     let sleep_duration = Duration::from_millis(10);
     let mut monitors: Vec<FileMonitor> = Vec::new();
@@ -124,8 +126,15 @@ pub fn run_server() -> String{
                 }
             }
             Err(e) if e.kind() == ErrorKind::WouldBlock => {
+                let mut has_broken_monitors = false;
                 for monitor in &mut monitors {
-                    monitor.update_links().expect("Could not update links");
+                    if monitor.update_links().is_err() {
+                        has_broken_monitors = true;
+                    }
+                }
+                if has_broken_monitors {
+                    monitors.retain(|monitor| monitor.write_directory_exists());
+                    has_broken_monitors = false;
                 }
             }
             Err(_e) => panic!("Could not accept incoming connection"),

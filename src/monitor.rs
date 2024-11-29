@@ -1,4 +1,4 @@
-use std::{collections::HashSet, path::{absolute, Path, PathBuf}};
+use std::{collections::HashSet, hash::Hash, path::{absolute, Path, PathBuf}};
 use crate::link::FileLink;
 use glob::{glob, Paths};
 use pathdiff::diff_paths;
@@ -10,6 +10,7 @@ use tabled::{Table, Tabled};
 pub enum UpdateError {
     PartialGlobMatch,
     FileIOError,
+    WriteDirectoryMission
 }
 
 #[derive(Debug)]
@@ -93,6 +94,10 @@ impl FileMonitor {
     }
 
     pub fn update_links(&mut self) -> Result<(), UpdateError> {
+        if !self.write_directory.exists() {
+            return Err(UpdateError::WriteDirectoryMission);
+        }
+
         let new_filelinks = self.calculate_monitored_files()?;
 
         for removed_file in self.links.difference(&new_filelinks) {
@@ -115,14 +120,6 @@ impl FileMonitor {
 
     }
 
-    pub fn serialize(&self) -> String {
-        serde_json::to_string(self).expect("Could not serialize the FileMonitor")
-    }
-
-    pub fn deserialize(text: &str) -> Self {
-        serde_json::from_str(text).expect("Could not deserialize FileMonitor")
-    }
-
     pub fn to_table_record(&self) -> Vec<String> {
         vec![
             self.read_pattern.to_owned(),
@@ -135,4 +132,26 @@ impl FileMonitor {
         vec!["Read Pattern", "Base Directory", "Write Directory"]
     }
 
+    pub fn write_directory_exists(&self) -> bool {
+        self.write_directory.exists()
+    }
+
+}
+
+impl PartialEq for FileMonitor {
+    fn eq(&self, other: &Self) -> bool {
+        self.read_pattern == other.read_pattern &&
+        self.write_directory == other.write_directory &&
+        self.base_directory == other.base_directory
+    }
+}
+
+impl Eq for FileMonitor {}
+
+impl Hash for FileMonitor {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.read_pattern.hash(state);
+        self.write_directory.hash(state);
+        self.base_directory.hash(state);
+    }
 }
