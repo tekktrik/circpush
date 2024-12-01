@@ -28,19 +28,6 @@ pub struct FileMonitor {
     links: HashSet<FileLink>,
 }
 
-// impl Tabled for FileMonitor {
-
-//     const LENGTH: usize = 3;
-
-//     fn fields(&self) -> Vec<std::borrow::Cow<'_, str>> {
-//         todo!()
-//     }
-
-//     fn headers() -> Vec<std::borrow::Cow<'static, str>> {
-//         Table::builder(iter).index()
-//     }
-// }
-
 impl FileMonitor {
 
     pub fn new(read_pattern: String, write_directory: PathBuf, base_directory: PathBuf) -> Result<Self, PathError> {
