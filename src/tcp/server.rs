@@ -130,6 +130,7 @@ pub fn run_server() -> String {
                 for monitor in &mut monitors {
                     if monitor.update_links().is_err() {
                         has_broken_monitors = true;
+                        break;
                     }
                 }
                 if has_broken_monitors {
