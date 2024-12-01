@@ -40,6 +40,7 @@ enum Command {
     LinkView {
         #[arg(default_value_t = 0)]
         number: usize,
+        #[arg(short, long)]
         absolute: bool,
     },
     #[command(name = "ledger")]
