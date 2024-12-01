@@ -1,8 +1,6 @@
 use crate::commands::{Request, Response, STOP_RESPONSE};
 use crate::monitor::FileMonitor;
 use serde::Deserialize;
-use std::borrow::Borrow;
-use std::collections::HashSet;
 use std::io::{prelude::*, ErrorKind};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::process::{Command, Stdio};
@@ -75,11 +73,11 @@ fn handle_connection(mut stream: TcpStream, monitors: &mut Vec<FileMonitor>) -> 
                 monitors.clear();
                 Response::Message { msg: String::from("All links cleared!") }
             }
-            else if monitors.len() == 0 {
+            else if monitors.is_empty() {
                 Response::ErrorMessage { msg: String::from("No links are active") }
             }
             else if *number > monitors.len() {
-                Response::ErrorMessage { msg: String::from(format!("Link {number} does not exist!")) }
+                Response::ErrorMessage { msg: format!("Link {number} does not exist!") }
             }
             else {
                 let index = number - 1;
@@ -92,7 +90,7 @@ fn handle_connection(mut stream: TcpStream, monitors: &mut Vec<FileMonitor>) -> 
                 let all_monitors_json = serde_json::to_string(&monitors).expect("Could not convert FileMonitors to JSON");
                 Response::Links { json: all_monitors_json }
             }
-            else if monitors.len() == 0 {
+            else if monitors.is_empty() {
                 Response::ErrorMessage { msg: String::from("No links are active") }
             }
             else if *number > monitors.len() {
@@ -135,7 +133,6 @@ pub fn run_server() -> String {
                 }
                 if has_broken_monitors {
                     monitors.retain(|monitor| monitor.write_directory_exists());
-                    has_broken_monitors = false;
                 }
             }
             Err(_e) => panic!("Could not accept incoming connection"),

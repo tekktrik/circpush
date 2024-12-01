@@ -3,8 +3,6 @@ use crate::link::FileLink;
 use glob::{glob, Paths};
 use pathdiff::diff_paths;
 use serde::{Deserialize, Serialize};
-use tabled::{Table, Tabled};
-use sysinfo::Disks;
 
 
 #[derive(Debug)]
@@ -121,10 +119,10 @@ impl FileMonitor {
         // TODO: Fix blank string if current directory for base and write dirs
         let mut base_directory_str = base_directory.to_str().expect("Could not convert base directory to String");
         let mut write_directory_str = write_directory.to_str().expect("Could not convert write directory to String");
-        if base_directory_str == "" {
+        if base_directory_str.is_empty() {
             base_directory_str = ".";
         }
-        if write_directory_str == "" {
+        if write_directory_str.is_empty() {
             write_directory_str = ".";
         }
         vec![
