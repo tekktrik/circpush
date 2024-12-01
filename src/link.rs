@@ -92,7 +92,6 @@ impl FileLink {
     }
 
     pub fn update(&mut self) -> Result<u64, FileUpdateError> {
-        // TODO: Wrong error returned
         let amount_copied = match fs::copy(&self.source, &self.destination) {
             Ok(amount_copied) => amount_copied,
             Err(_) => return Err(FileUpdateError::CopyFailed)
