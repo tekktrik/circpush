@@ -122,24 +122,33 @@ impl FileMonitor {
     pub fn to_table_record(&self, absolute: bool) -> Vec<String> {
         let current_dir = env::current_dir().expect("Could not get current directory");
         let base_directory = if absolute {
-            &diff_paths(&self.base_directory, &current_dir).unwrap()
-        } else {
             &self.base_directory
+        } else {
+            &diff_paths(&self.base_directory, &current_dir).unwrap()
         };
         let write_directory = if absolute {
-            &diff_paths(&self.write_directory, &current_dir).unwrap()
-        } else {
             &self.write_directory
+        } else {
+            &diff_paths(&self.write_directory, &current_dir).unwrap()
         };
+        // TODO: Fix blank string if current directory for base and write dirs
+        let mut base_directory_str = base_directory.to_str().expect("Could not convert base directory to String");
+        let mut write_directory_str = write_directory.to_str().expect("Could not convert write directory to String");
+        if base_directory_str == "" {
+            base_directory_str = ".";
+        }
+        if write_directory_str == "" {
+            write_directory_str = ".";
+        }
         vec![
             self.read_pattern.to_owned(),
-            String::from(base_directory.to_str().expect("Could not convert base directory to String")),
-            String::from(write_directory.to_str().expect("Could not convert write directory to String")),
+            String::from(base_directory_str),
+            String::from(write_directory_str),
         ]
     }
 
     pub fn table_header() -> Vec<&'static str> {
-        vec!["Read Pattern", "Base Directory", "Write Directory"]
+        vec!["Link #", "Read Pattern", "Base Directory", "Write Directory"]
     }
 
     pub fn write_directory_exists(&self) -> bool {
