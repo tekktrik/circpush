@@ -106,14 +106,6 @@ impl FileLink {
         fs::remove_file(&self.destination)
     }
 
-    pub fn source_exists(&self) -> bool {
-        self.source.exists()
-    }
-
-    pub fn destination_exists(&self) -> bool {
-        self.destination.exists()
-    }
-
 }
 
 impl PartialEq for FileLink {
