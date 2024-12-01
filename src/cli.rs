@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, path::absolute};
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
@@ -29,7 +29,7 @@ enum Command {
     LinkStart {
         read_pattern: String,
         #[arg(short, long, value_name = "PATH")]
-        path: Option<PathBuf>,   
+        path: Option<PathBuf>,
     },
     #[command(name = "stop")]
     LinkStop {
@@ -39,7 +39,8 @@ enum Command {
     #[command(name = "view")]
     LinkView {
         #[arg(default_value_t = 0)]
-        number: usize
+        number: usize,
+        absolute: bool,
     },
     #[command(name = "ledger")]
     LinkLedger,
@@ -62,12 +63,12 @@ pub fn entry() -> Result<String, String> {
             }
             crate::tcp::client::start_link(
                 read_pattern,
-                path.unwrap(),
+                absolute(path.unwrap()).expect("Could not get the current directory"),
                 env::current_dir().expect("Could not get the current directory"),
             )
         },
         Command::LinkStop { number } => crate::tcp::client::stop_link(number),
-        Command::LinkView { number } => crate::tcp::client::view_link(number),
+        Command::LinkView { number , absolute} => crate::tcp::client::view_link(number, absolute),
         Command::LinkLedger => Err(String::from("WIP")),
 
     }

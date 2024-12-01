@@ -78,7 +78,7 @@ pub fn stop_link(number: usize) -> Result<String, String> {
     }
 }
 
-pub fn view_link(number: usize) -> Result<String, String> {
+pub fn view_link(number: usize, absolute: bool) -> Result<String, String> {
     let response = match communicate(Request::ViewLink { number }) {
         Ok(Response::Links { json }) => json,
         Err(error) => return Err(error),
@@ -91,7 +91,7 @@ pub fn view_link(number: usize) -> Result<String, String> {
     table_builder.push_record(FileMonitor::table_header());
 
     for (index, monitor) in monitor_list.iter().enumerate()  {
-        let mut record = monitor.to_table_record();
+        let mut record = monitor.to_table_record(absolute);
         let monitor_num = index + 1;
         record.insert(0, monitor_num.to_string());
         table_builder.push_record(record);

@@ -1,16 +1,17 @@
-use std::{collections::HashSet, hash::Hash, path::{absolute, Path, PathBuf}};
+use std::{collections::HashSet, env, hash::Hash, path::{absolute, Path, PathBuf}};
 use crate::link::FileLink;
 use glob::{glob, Paths};
 use pathdiff::diff_paths;
 use serde::{Deserialize, Serialize};
 use tabled::{Table, Tabled};
+use sysinfo::Disks;
 
 
 #[derive(Debug)]
 pub enum UpdateError {
     PartialGlobMatch,
     FileIOError,
-    WriteDirectoryMission
+    BadFileLink
 }
 
 #[derive(Debug)]
@@ -94,10 +95,6 @@ impl FileMonitor {
     }
 
     pub fn update_links(&mut self) -> Result<(), UpdateError> {
-        if !self.write_directory.exists() {
-            return Err(UpdateError::WriteDirectoryMission);
-        }
-
         let new_filelinks = self.calculate_monitored_files()?;
 
         for removed_file in self.links.difference(&new_filelinks) {
@@ -109,7 +106,9 @@ impl FileMonitor {
         for new_filelink in &mut new_filelinks_vec {
             if new_filelink.is_outdated() {
                 new_filelink.ensure_writepath().expect("Could not ensure write path");
-                new_filelink.update().expect("Could not update linked files");
+                if new_filelink.update().is_err() {
+                    return Err(UpdateError::BadFileLink)
+                }
             }
         }
 
@@ -120,11 +119,22 @@ impl FileMonitor {
 
     }
 
-    pub fn to_table_record(&self) -> Vec<String> {
+    pub fn to_table_record(&self, absolute: bool) -> Vec<String> {
+        let current_dir = env::current_dir().expect("Could not get current directory");
+        let base_directory = if absolute {
+            &diff_paths(&self.base_directory, &current_dir).unwrap()
+        } else {
+            &self.base_directory
+        };
+        let write_directory = if absolute {
+            &diff_paths(&self.write_directory, &current_dir).unwrap()
+        } else {
+            &self.write_directory
+        };
         vec![
             self.read_pattern.to_owned(),
-            String::from(self.base_directory.to_str().expect("Could not convert base directory to String")),
-            String::from(self.write_directory.to_str().expect("Could not convert write directory to String")),
+            String::from(base_directory.to_str().expect("Could not convert base directory to String")),
+            String::from(write_directory.to_str().expect("Could not convert write directory to String")),
         ]
     }
 
