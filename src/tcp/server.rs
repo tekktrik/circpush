@@ -148,7 +148,7 @@ fn handle_connection(mut stream: TcpStream, monitors: &mut Vec<FileMonitor>) -> 
             else {
                 let index = number - 1;
                 let specific_monitor = monitors.index(index);
-                let monitor_json = serde_json::to_string(specific_monitor)
+                let monitor_json = serde_json::to_string(&[specific_monitor])
                     .expect("Could not convert the link to JSON");
                 Response::Links { json: monitor_json }
             }
