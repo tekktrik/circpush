@@ -122,12 +122,11 @@ pub fn view_monitor(number: usize, absolute: bool) -> Result<String, String> {
     let mut table_builder = Builder::default();
     table_builder.push_record(FileMonitor::table_header());
 
-    // For each FileMonitor returned, get the associated table record and add it along with the associated index
-    // TODO: Index should only be used if all records are returned
+    // For each FileMonitor returned, get the associated table record and add it along with the associated monitor number
     for (index, monitor) in monitor_list.iter().enumerate() {
         let mut record = monitor.to_table_record(absolute);
-        let monitor_num = index + 1;
-        record.insert(0, monitor_num.to_string());
+        let record_number = if number == 0 { index + 1 } else { number };
+        record.insert(0, record_number.to_string());
         table_builder.push_record(record);
     }
 
