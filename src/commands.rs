@@ -3,20 +3,34 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 pub const STOP_RESPONSE: &str = "@stopping";
-// pub const COMMAND_ACK: &str = "@ack";
-// pub const COMMAND_NAK: &str = "@nak";
 
+/// Various types of requests from the TCP client for the server
+///
+/// These can be serialized into JSON for communication.
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum Request {
     Ping,
-    Echo { msg: String },
+    Echo {
+        msg: String,
+    },
     Shutdown,
-    StartLink { read_pattern: String, write_directory: PathBuf, base_directory: PathBuf },
-    StopLink { number: usize},
-    ViewLink { number: usize},
+    StartLink {
+        read_pattern: String,
+        write_directory: PathBuf,
+        base_directory: PathBuf,
+    },
+    StopLink {
+        number: usize,
+    },
+    ViewLink {
+        number: usize,
+    },
 }
 
+/// Various types of responses from the TCP server to the client
+///
+/// These can be serialized into JSON for communication.
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum Response {
