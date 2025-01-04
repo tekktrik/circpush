@@ -20,13 +20,12 @@ struct ServerState {
 #[cfg(target_family = "unix")]
 /// Starts the server in a seperate process by using `circpush run`
 pub fn start_server() -> String {
-    Command::new("circpush")
+    let _daemon = Command::new("circpush")
         .arg("server")
         .arg("run")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
-        .spawn()
-        .expect("Could not spawn server process");
+        .spawn();
     format!("Server started on port {PORT}")
 }
 
@@ -35,12 +34,11 @@ pub fn start_server() -> String {
 pub fn start_server() -> String {
     use std::os::windows::process::CommandExt;
     use windows_sys::Win32::System::Threading::{CREATE_NEW_PROCESS_GROUP, DETACHED_PROCESS};
-    Command::new("circpush")
+    let _daemon = Command::new("circpush")
         .arg("server")
         .arg("run")
         .creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP)
-        .spawn()
-        .expect("Could not spawn server process");
+        .spawn();
     format!("Server started on port {PORT}")
 }
 

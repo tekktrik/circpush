@@ -1,13 +1,12 @@
 use crate::commands::{Request, Response, STOP_RESPONSE};
 use crate::monitor::{as_table, FileMonitor};
-use crate::workspace::{self, Workspace, WorkspaceLoadError, WorkspaceSaveError};
+use crate::workspace::{Workspace, WorkspaceLoadError, WorkspaceSaveError};
 use crate::tcp::server::PORT;
 use serde::Deserialize;
 use std::io::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::path::PathBuf;
 use std::time::Duration;
-use tabled::builder::Builder;
 
 /// Open a non-blocking connection to the TCP server
 fn open_connection() -> Result<TcpStream, String> {
@@ -148,9 +147,8 @@ pub fn save_workspace(name: &str, desc: &str, force: bool) -> Result<String, Str
     // Save the workspace
     match workspace.save_as_name(name, force) {
         Ok(_) => Ok(format!("Saved the current set of file monitors as workspace '{name}'")),
-        Err(error) if error == WorkspaceSaveError::AlreadyExists => Err(format!("Workspace '{name}' already exists, use --force to overwrite it")),
-        Err(error) if error == WorkspaceSaveError::BadFileSave => Err(format!("Could not save workspace '{name}'")),
-        Err(_) => Err(String::from("Something went wrong while saving the workspace")),
+        Err(WorkspaceSaveError::AlreadyExists) => Err(format!("Workspace '{name}' already exists, use --force to overwrite it")),
+        Err(WorkspaceSaveError::BadFileSave) => Err(format!("Could not save workspace '{name}'")),
     }
 }
 
@@ -161,9 +159,8 @@ pub fn load_workspace(name: &str) -> Result<String, String> {
 
     let workspace = match Workspace::from_name(name) {
         Ok(workspace) => workspace,
-        Err(error) if error == WorkspaceLoadError::DoesNotExist => return Err(format!("Workspace '{name}' does not exist")),
-        Err(error) if error == WorkspaceLoadError::BadFileRead => return Err(format!("Could not load workspace '{name}'")),
-        Err(_) => return Err(String::from("Something went wrong while loading the workspace")),
+        Err(WorkspaceLoadError::DoesNotExist) => return Err(format!("Workspace '{name}' does not exist")),
+        Err(WorkspaceLoadError::BadFileRead) => return Err(format!("Could not load workspace '{name}'")),
     };
 
     for file_monitor in workspace.monitors {

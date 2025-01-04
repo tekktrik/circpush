@@ -1,4 +1,3 @@
-use dirs;
 use std::fs;
 use std::path::PathBuf;
 use std::{env, path::absolute};
@@ -144,8 +143,8 @@ fn server_subentry(server_command: ServerCommand) -> Result<String, String> {
 fn workspace_subentry(workspace_command: WorkspaceCommand) -> Result<String, String> {
     match workspace_command {
         WorkspaceCommand::Save { name, description, force } => {
-            let desc = if description.is_none() { "" } else { &description.unwrap() };
-            crate::tcp::client::save_workspace(&name, desc, force)
+            let desc =  description.unwrap_or_default();
+            crate::tcp::client::save_workspace(&name, &desc, force)
         },
         WorkspaceCommand::Load { name } => crate::tcp::client::load_workspace(&name),
         WorkspaceCommand::List => crate::workspace::list_workspaces(),

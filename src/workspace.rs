@@ -75,7 +75,7 @@ impl Workspace {
                 if !preexists {
                     fs::remove_file(filepath).expect("Could not delete file after failing to create workspace file");
                 }
-                return Err(WorkspaceSaveError::BadFileSave)
+                Err(WorkspaceSaveError::BadFileSave)
             },
         }
     }
@@ -126,29 +126,27 @@ pub fn list_workspaces() -> Result<String, String> {
     let mut workspace_names = String::new();
 
     // Iterate through all of the workspace sub-entries
-    for workspace_entry in get_workspace_dir()
+    for entry in get_workspace_dir()
         .read_dir()
         .expect("Could not read the workspaces directory")
+        .flatten()
     {
-        // Get the contained directory entry
-        if let Ok(entry) = workspace_entry {
-            // Ignore anything that is not a file
-            if !entry.path().is_file() {
-                continue;
-            }
-
-            // Get the name of the workspace and add it to the string
-            let entry_path = entry.path();
-            let workspace_name = entry_path
-                .file_stem()
-                .expect("Could not get file stem of workspace file");
-            workspace_names.push_str(
-                workspace_name
-                    .to_str()
-                    .expect("Could not convert filestem to string"),
-            );
-            workspace_names.push('\n');
+        // Ignore anything that is not a file
+        if !entry.path().is_file() {
+            continue;
         }
+
+        // Get the name of the workspace and add it to the string
+        let entry_path = entry.path();
+        let workspace_name = entry_path
+            .file_stem()
+            .expect("Could not get file stem of workspace file");
+        workspace_names.push_str(
+            workspace_name
+                .to_str()
+                .expect("Could not convert filestem to string"),
+        );
+        workspace_names.push('\n');
     }
 
     // If no workspaces were found, return this to the user
@@ -203,9 +201,8 @@ pub fn view_workspace(name: &str, absolute: bool) -> Result<String, String> {
     // Get the Workspace with the given name
     let workspace = match Workspace::from_name(name) {
         Ok(workspace) => workspace,
-        Err(error) if error == WorkspaceLoadError::DoesNotExist => return Err(format!("Workspace '{name}' does not exist")),
-        Err(error) if error == WorkspaceLoadError::BadFileRead => return Err(format!("Could not load the workspace file requested")),
-        Err(_) => return Err(String::from("Error oc")),
+        Err(WorkspaceLoadError::DoesNotExist) => return Err(format!("Workspace '{name}' does not exist")),
+        Err(WorkspaceLoadError::BadFileRead) => return Err(String::from("Could not load the workspace file requested")),
     };
 
     // Create a new text, seeding it with the name of the workspace
