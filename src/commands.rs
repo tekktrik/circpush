@@ -26,6 +26,7 @@ pub enum Request {
     ViewLink {
         number: usize,
     },
+    ViewWorkspaceName,
 }
 
 /// Various types of responses from the TCP server to the client

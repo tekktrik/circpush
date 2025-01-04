@@ -12,6 +12,11 @@ use std::time::Duration;
 /// Default port on which to start the server
 pub const PORT: u16 = 61553;
 
+struct ServerState {
+    monitors: Vec<FileMonitor>,
+    workspace_name: String,
+}
+
 #[cfg(target_family = "unix")]
 /// Starts the server in a seperate process by using `circpush run`
 pub fn start_server() -> String {
@@ -59,7 +64,11 @@ fn bind_socket() -> TcpListener {
 }
 
 /// Handle the TCP stream connection and modify the list of monitors accordingly
-fn handle_connection(mut stream: TcpStream, monitors: &mut Vec<FileMonitor>) -> bool {
+fn handle_connection(mut stream: TcpStream, state: &mut ServerState) -> bool {
+    // Get the monitors and workspace name as their own references
+    let monitors = &mut state.monitors;
+    let workspace_name = &mut state.workspace_name;
+
     // Get the request associated with the TCP connection
     let mut serialization = serde_json::Deserializer::from_reader(&stream);
     let request =
@@ -87,6 +96,7 @@ fn handle_connection(mut stream: TcpStream, monitors: &mut Vec<FileMonitor>) -> 
 
             // Push the new FileMonitor to the lists
             monitors.push(new_monitor);
+            *workspace_name = String::from("");
 
             // Get the new link number and send it with the response
             let new_link_number = monitors.len();
@@ -98,6 +108,7 @@ fn handle_connection(mut stream: TcpStream, monitors: &mut Vec<FileMonitor>) -> 
             // If the link number is 0, stop all monitors
             if *number == 0 {
                 monitors.clear();
+                *workspace_name = String::from("");
                 Response::Message {
                     msg: String::from("All links cleared!"),
                 }
@@ -118,6 +129,7 @@ fn handle_connection(mut stream: TcpStream, monitors: &mut Vec<FileMonitor>) -> 
             else {
                 let index = number - 1;
                 monitors.remove(index);
+                *workspace_name = String::from("");
                 Response::Message {
                     msg: String::from("Link removed!"),
                 }
@@ -153,6 +165,9 @@ fn handle_connection(mut stream: TcpStream, monitors: &mut Vec<FileMonitor>) -> 
                 Response::Links { json: monitor_json }
             }
         }
+        Request::ViewWorkspaceName => {
+            Response::Message { msg: workspace_name.clone() }
+        }
     };
 
     // Send the response back to the client
@@ -173,14 +188,17 @@ pub fn run_server() -> String {
     let sleep_duration = Duration::from_millis(10);
 
     // Create the initial list for FileMonitors (empty)
-    let mut monitors: Vec<FileMonitor> = Vec::new();
+    let mut state = ServerState {
+        monitors: Vec::new(),
+        workspace_name: String::new(),
+    };
 
     // Handle incoming connections
     for connection in listener.incoming() {
         match connection {
             // Incoming connection received
             Ok(stream) => {
-                let keep_running = handle_connection(stream, &mut monitors);
+                let keep_running = handle_connection(stream, &mut state);
                 if !keep_running {
                     break;
                 }
@@ -188,14 +206,16 @@ pub fn run_server() -> String {
             // No connection received before non-blocking timeout
             Err(e) if e.kind() == ErrorKind::WouldBlock => {
                 let mut has_broken_monitors = false;
-                for monitor in &mut monitors {
+                for monitor in &mut state.monitors {
                     if monitor.update_links().is_err() {
                         has_broken_monitors = true;
                         break;
                     }
                 }
                 if has_broken_monitors {
-                    monitors.retain(|monitor| monitor.write_directory_exists());
+                    state
+                        .monitors
+                        .retain(|monitor| monitor.write_directory_exists());
                 }
             }
             // Any other errors

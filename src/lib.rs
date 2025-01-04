@@ -4,6 +4,7 @@ mod commands;
 mod link;
 mod monitor;
 mod tcp;
+mod workspace;
 
 use pyo3::prelude::*;
 use std::process::exit;

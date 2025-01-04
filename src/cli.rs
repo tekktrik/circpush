@@ -1,9 +1,12 @@
+use dirs;
+use std::fs;
 use std::path::PathBuf;
 use std::{env, path::absolute};
 
 use clap::{Parser, Subcommand};
 
 use crate::board::find_circuitpy;
+use crate::workspace::ensure_workspace_dir;
 
 /// Main CLI entry struct
 #[derive(Parser)]
@@ -42,6 +45,8 @@ enum Command {
     },
     #[command(name = "ledger")]
     LinkLedger,
+    #[command(subcommand)]
+    Workspace(WorkspaceCommand),
 }
 
 /// Server command sub-command options
@@ -52,8 +57,38 @@ enum ServerCommand {
     Stop,
 }
 
+#[derive(Subcommand)]
+enum WorkspaceCommand {
+    Save {
+        name: String,
+        #[arg(short, long)]
+        description: Option<String>,
+        #[arg(short, long, default_value_t = false)]
+        force: bool,
+    },
+    Load { name: String },
+    List,
+    View {
+        name: String,
+        #[arg(short, long)]
+        absolute: bool,
+    },
+    Current,
+    Delete { name: String },
+    Rename { orig: String, new: String},
+}
+
 /// Main entry for the CLI
 pub fn entry() -> Result<String, String> {
+    // Ensure all necessary folders are created
+    if ensure_app_dir().is_err() {
+        return Err(String::from("Could not ensure the application directory exists"));
+    }
+
+    if ensure_workspace_dir().is_err() {
+        return Err(String::from("Could not ensure the workspace directory exists"));
+    }
+
     // Get the CLI arguments and remove the first one, which is the "python" command
     let mut cli_args: Vec<String> = env::args().collect();
     cli_args.remove(0);
@@ -62,6 +97,7 @@ pub fn entry() -> Result<String, String> {
     let cli = Cli::parse_from(cli_args);
     match cli.command {
         Command::Server(server_command) => server_subentry(server_command),
+        Command::Workspace(workspace_command) => workspace_subentry(workspace_command),
         Command::Ping => crate::tcp::client::ping(),
         Command::Echo { text } => crate::tcp::client::echo(text),
         Command::LinkStart {
@@ -102,4 +138,33 @@ fn server_subentry(server_command: ServerCommand) -> Result<String, String> {
         ServerCommand::Start => Ok(crate::tcp::server::start_server()),
         ServerCommand::Stop => crate::tcp::client::stop_server(),
     }
+}
+
+/// Workspace command subentry, for performing the appropriate command
+fn workspace_subentry(workspace_command: WorkspaceCommand) -> Result<String, String> {
+    match workspace_command {
+        WorkspaceCommand::Save { name, description, force } => {
+            let desc = if description.is_none() { "" } else { &description.unwrap() };
+            crate::tcp::client::save_workspace(&name, desc, force)
+        },
+        WorkspaceCommand::Load { name } => crate::tcp::client::load_workspace(&name),
+        WorkspaceCommand::List => crate::workspace::list_workspaces(),
+        WorkspaceCommand::View { name, absolute } => crate::workspace::view_workspace(&name, absolute),
+        WorkspaceCommand::Current => crate::tcp::client::get_current_workspace(),
+        WorkspaceCommand::Delete { name } => crate::workspace::delete_workspace(&name),
+        WorkspaceCommand::Rename { orig, new } => crate::workspace::rename_workspace(&orig, &new),
+    }
+}
+
+pub fn get_app_dir() -> PathBuf {
+    let config_dir = dirs::config_dir().expect("Could not locate config directory");
+    config_dir.join(env!("CARGO_PKG_NAME"))
+}
+
+pub fn ensure_app_dir() -> Result<(), ()> {
+    let dir = get_app_dir();
+    if fs::create_dir_all(dir).is_err() {
+        return Err(());
+    }
+    Ok(())
 }

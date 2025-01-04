@@ -2,6 +2,7 @@ use crate::link::FileLink;
 use glob::glob;
 use pathdiff::diff_paths;
 use serde::{Deserialize, Serialize};
+use tabled::{builder::Builder, Table};
 use std::{
     collections::HashSet,
     env,
@@ -30,11 +31,11 @@ pub enum PathError {
 /// be copied to as the source files are found and updated.
 ///
 /// These can be serialized via JSON for communication via TCP
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct FileMonitor {
-    read_pattern: String,
-    write_directory: PathBuf,
-    base_directory: PathBuf,
+    pub read_pattern: String,
+    pub write_directory: PathBuf,
+    pub base_directory: PathBuf,
     links: HashSet<FileLink>,
 }
 
@@ -65,18 +66,6 @@ impl FileMonitor {
             None => Err(PathError::NoRelative),
         }
     }
-
-    // /// Iterate over the
-    // fn iterate_paths(&self, paths: Paths) -> Result<HashSet<FileLink>, UpdateError> {
-    //     let mut new_hashset = HashSet::new();
-    //     for read_path in paths.map(|result| result.expect("Could not read all glob matches")).filter(|path| path.is_file()) {
-    //         let abs_read_path = absolute(&read_path).expect("Unable to create absolute path");
-    //         let abs_write_path = self.get_write_path(&read_path).expect("Could not get write path wile iterating paths");
-    //         let filelink = FileLink::new(&abs_read_path, &abs_write_path).expect("Could not create new FileLink");
-    //         new_hashset.insert(filelink);
-    //     }
-    //     Ok(new_hashset)
-    // }
 
     /// Calculate the monitored source files, returning an error if the glob match fails
     pub fn calculate_monitored_files(&self) -> Result<HashSet<FileLink>, UpdateError> {
@@ -219,4 +208,21 @@ impl Hash for FileMonitor {
         self.write_directory.hash(state);
         self.base_directory.hash(state);
     }
+}
+
+pub fn as_table(monitors: &[FileMonitor], number: usize, absolute: bool) -> Table{
+    // Create a tabled table to be built and add the header row
+    let mut table_builder = Builder::default();
+    table_builder.push_record(FileMonitor::table_header());
+
+    // For each FileMonitor returned, get the associated table record and add it along with the associated monitor number
+    for (index, monitor) in monitors.iter().enumerate() {
+        let mut record = monitor.to_table_record(absolute);
+        let record_number = if number == 0 { index + 1 } else { number };
+        record.insert(0, record_number.to_string());
+        table_builder.push_record(record);
+    }
+
+    // Return a built table
+    table_builder.build()
 }

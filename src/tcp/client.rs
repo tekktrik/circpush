@@ -1,5 +1,6 @@
 use crate::commands::{Request, Response, STOP_RESPONSE};
-use crate::monitor::FileMonitor;
+use crate::monitor::{as_table, FileMonitor};
+use crate::workspace::{self, Workspace, WorkspaceLoadError, WorkspaceSaveError};
 use crate::tcp::server::PORT;
 use serde::Deserialize;
 use std::io::prelude::*;
@@ -105,8 +106,7 @@ pub fn stop_monitor(number: usize) -> Result<String, String> {
     }
 }
 
-/// Send a view file monitor request to the server
-pub fn view_monitor(number: usize, absolute: bool) -> Result<String, String> {
+fn get_monitor_list(number: usize) -> Result<Vec<FileMonitor>, String> {
     // Get the response of the server communication
     let response = match communicate(Request::ViewLink { number }) {
         Ok(Response::Links { json }) => json,
@@ -115,20 +115,79 @@ pub fn view_monitor(number: usize, absolute: bool) -> Result<String, String> {
     };
 
     // Parse the response string into a list of FileMonitors
-    let monitor_list: Vec<FileMonitor> =
-        serde_json::from_str(&response).expect("Failed to parse JSON response");
+    let monitors: Vec<FileMonitor> = serde_json::from_str(&response).expect("Failed to parse JSON response");
+    Ok(monitors)
+}
 
-    // Create a tabled table to be built and add the header row
-    let mut table_builder = Builder::default();
-    table_builder.push_record(FileMonitor::table_header());
+/// Send a view file monitor request to the server
+pub fn view_monitor(number: usize, absolute: bool) -> Result<String, String> {
+    let monitor_list = match get_monitor_list(number) {
+        Ok(file_monitors) => file_monitors,
+        Err(error) => return Err(error),
+    };
 
-    // For each FileMonitor returned, get the associated table record and add it along with the associated monitor number
-    for (index, monitor) in monitor_list.iter().enumerate() {
-        let mut record = monitor.to_table_record(absolute);
-        let record_number = if number == 0 { index + 1 } else { number };
-        record.insert(0, record_number.to_string());
-        table_builder.push_record(record);
+    let table = as_table(&monitor_list, number, absolute);
+    Ok(table.to_string())
+}
+
+/// Send a save file monitors request to the server
+pub fn save_workspace(name: &str, desc: &str, force: bool) -> Result<String, String> {
+    // Get the response of the server communication
+    let monitor_list = match get_monitor_list(0) {
+        Ok(file_monitors) => file_monitors,
+        Err(error) => return Err(error),
+    };
+
+    if monitor_list.is_empty() {
+        return Err(String::from("No file monitors are active to save"));
     }
 
-    Ok(table_builder.build().to_string())
+    // Create the new workspace object
+    let workspace = Workspace::new(desc, &monitor_list);
+
+    // Save the workspace
+    match workspace.save_as_name(name, force) {
+        Ok(_) => Ok(format!("Saved the current set of file monitors as workspace '{name}'")),
+        Err(error) if error == WorkspaceSaveError::AlreadyExists => Err(format!("Workspace '{name}' already exists, use --force to overwrite it")),
+        Err(error) if error == WorkspaceSaveError::BadFileSave => Err(format!("Could not save workspace '{name}'")),
+        Err(_) => Err(String::from("Something went wrong while saving the workspace")),
+    }
+}
+
+/// Load the given workspace
+pub fn load_workspace(name: &str) -> Result<String, String> {
+    // Stop current file monitors
+    let _ = stop_monitor(0);
+
+    let workspace = match Workspace::from_name(name) {
+        Ok(workspace) => workspace,
+        Err(error) if error == WorkspaceLoadError::DoesNotExist => return Err(format!("Workspace '{name}' does not exist")),
+        Err(error) if error == WorkspaceLoadError::BadFileRead => return Err(format!("Could not load workspace '{name}'")),
+        Err(_) => return Err(String::from("Something went wrong while loading the workspace")),
+    };
+
+    for file_monitor in workspace.monitors {
+        if start_monitor(file_monitor.read_pattern, file_monitor.write_directory, file_monitor.base_directory).is_err() {
+            let _ = stop_monitor(0);
+            return Err(format!("Failed to start file monitors for workspace '{name}'"));
+        }
+    }
+
+    Ok(format!("Started workspace '{name}'"))
+}
+
+/// View the current workspace
+pub fn get_current_workspace() -> Result<String, String> {
+    // Get the response of the server communication
+    let mut name = match communicate(Request::ViewWorkspaceName) {
+        Ok(Response::Message { msg }) => msg,
+        Err(error) => return Err(error),
+        _ => return Err(String::from("ERROR: Could not retrieve workspace name")),
+    };
+
+    if name.is_empty() {
+        name = String::from("No workspace is currently active");
+    }
+
+    Ok(name)
 }
