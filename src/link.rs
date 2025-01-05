@@ -34,8 +34,8 @@ pub enum FileUpdateError {
 /// These can be serialized into JSON for communication via TCP
 #[derive(Serialize, Deserialize, Clone)]
 pub struct FileLink {
-    pub source: PathBuf,
-    pub destination: PathBuf,
+    source: PathBuf,
+    destination: PathBuf,
 }
 
 impl FileLink {
