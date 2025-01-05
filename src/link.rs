@@ -44,7 +44,7 @@ impl FileLink {
     /// The source path must be an existing file, and both the source and
     /// destination paths must be absolute.
     pub fn new(source: &Path, destination: &Path) -> Result<Self, FileLinkCreationError> {
-        // If the source path is not an existing file or is not abslute, return an error
+        // If the source path is not an existing file or is not absolute, return an error
         if !(source.is_file() && source.is_absolute()) {
             return Err(FileLinkCreationError::InvalidSource);
         }
