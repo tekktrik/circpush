@@ -70,3 +70,6 @@ docs/_build/
 
 # Pyenv
 .python-version
+
+# UF2 files
+**/info_uf2.txt
