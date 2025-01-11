@@ -80,13 +80,8 @@ enum WorkspaceCommand {
 /// Main entry for the CLI
 pub fn entry() -> Result<String, String> {
     // Ensure all necessary folders are created
-    if ensure_app_dir().is_err() {
-        return Err(String::from("Could not ensure the application directory exists"));
-    }
-
-    if ensure_workspace_dir().is_err() {
-        return Err(String::from("Could not ensure the workspace directory exists"));
-    }
+    ensure_app_dir();
+    ensure_workspace_dir();
 
     // Get the CLI arguments and remove the first one, which is the "python" command
     let mut cli_args: Vec<String> = env::args().collect();
@@ -160,10 +155,39 @@ pub fn get_app_dir() -> PathBuf {
     config_dir.join(env!("CARGO_PKG_NAME"))
 }
 
-pub fn ensure_app_dir() -> Result<(), ()> {
+pub fn ensure_app_dir() {
     let dir = get_app_dir();
-    if fs::create_dir_all(dir).is_err() {
-        return Err(());
+    fs::create_dir_all(dir).expect("Could not create application directory");
+}
+
+#[cfg(feature = "test-support")]
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    mod get_app_dir {
+
+        use super::*;
     }
-    Ok(())
+
+    mod ensure_app_dir {
+
+        #[test]
+        fn successes() {
+            let preexisted = crate::test_support::prepare_fresh_state();
+
+            // Check creating new application directory
+            
+
+            // Check skipping application directory creation
+
+            crate::test_support::restore_previous_state(preexisted);
+        }
+    }
+
+    #[test]
+    fn get_app_dir() {
+
+    }
 }
