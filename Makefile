@@ -48,6 +48,10 @@ else
 	-@rm -rf tests/sandbox/circuitpython
 endif
 
+.PHONY: wipe-test-artifacts
+wipe-test-artifacts:
+	-@python scripts/rmdir_test_config.py
+
 .PHONY: test
 test:
 	-@"${MAKE}" test-prep --no-print-directory

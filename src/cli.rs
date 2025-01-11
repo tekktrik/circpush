@@ -160,15 +160,13 @@ pub fn ensure_app_dir() {
     fs::create_dir_all(dir).expect("Could not create application directory");
 }
 
-#[cfg(feature = "test-support")]
-#[cfg(test)]
+#[cfg(all(feature = "test-support", test))]
 mod test {
 
-    use super::*;
-
-    mod get_app_dir {
-
-        use super::*;
+    #[test]
+    fn get_app_dir() {
+        let app_dir = crate::cli::get_app_dir();
+        assert!(app_dir.ends_with(env!("CARGO_PKG_NAME")))
     }
 
     mod ensure_app_dir {
@@ -176,18 +174,9 @@ mod test {
         #[test]
         fn successes() {
             let preexisted = crate::test_support::prepare_fresh_state();
-
-            // Check creating new application directory
-            
-
-            // Check skipping application directory creation
-
+            let app_dir = crate::cli::get_app_dir();
+            assert!(app_dir.exists());
             crate::test_support::restore_previous_state(preexisted);
         }
-    }
-
-    #[test]
-    fn get_app_dir() {
-
     }
 }
