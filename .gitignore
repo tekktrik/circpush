@@ -73,3 +73,6 @@ docs/_build/
 
 # UF2 files
 **/info_uf2.txt
+
+# Mocked mount point
+testmount/
