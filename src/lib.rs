@@ -40,7 +40,7 @@ pub mod test_support {
 
     use super::*;
 
-    use std::fs;
+    use std::{fs, path::PathBuf};
 
     pub const TEST_APP_DIRECTORY_NAME: &str = ".circpush-test";
 
@@ -48,9 +48,13 @@ pub mod test_support {
         tcp::client::stop_server().expect("Could not stop server");
     }
 
+    fn get_test_directory() -> PathBuf {
+        cli::get_app_dir().with_file_name(TEST_APP_DIRECTORY_NAME)
+    }
+
     pub fn save_app_directory() -> bool {
         let app_directory = cli::get_app_dir();
-        let test_directory = app_directory.with_file_name(TEST_APP_DIRECTORY_NAME);
+        let test_directory = get_test_directory();
         let preexists = app_directory.exists();
         if preexists {
             fs::create_dir(&test_directory).expect("Could not create test application directory");
@@ -62,9 +66,9 @@ pub mod test_support {
 
     pub fn restore_app_directory() {
         let app_directory = cli::get_app_dir();
-        let test_directory = app_directory.with_file_name(TEST_APP_DIRECTORY_NAME);
+        let test_directory = get_test_directory();
         fs_extra::dir::move_dir(&test_directory.join(env!("CARGO_PKG_NAME")), &app_directory.parent().expect("Could not get config folder"), &fs_extra::dir::CopyOptions::new()).expect("Could not restore application directory");
-        fs::remove_dir(test_directory).expect("Could not delete test application folder");
+        fs::remove_dir_all(test_directory).expect("Could not delete test application folder");
     }
 
     pub fn prepare_fresh_state() -> bool {
