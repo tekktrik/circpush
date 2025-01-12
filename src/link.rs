@@ -104,9 +104,6 @@ impl FileLink {
         // Get the source and destination file modification times
         let source_mtime = get_file_mtime(&self.source);
         let destination_mtime = get_file_mtime(&self.destination);
-
-        // Return where the source modification time is later than the destination modification time
-        // source_mtime.seconds() > destination_mtime.seconds() || (source_mtime.seconds() == destination_mtime.seconds() && source_mtime.nanoseconds() > destination_mtime.nanoseconds())
         source_mtime > destination_mtime
     }
 
