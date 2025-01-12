@@ -86,11 +86,10 @@ fn handle_connection(mut stream: TcpStream, state: &mut ServerState) -> bool {
         } => {
             // Create a new FileMonitor
             let new_monitor = FileMonitor::new(
-                read_pattern.clone(),
-                write_directory.clone(),
-                base_directory.clone(),
-            )
-            .expect("Path error occurred!");
+                read_pattern,
+                write_directory,
+                base_directory,
+            );
 
             // Push the new FileMonitor to the lists
             monitors.push(new_monitor);
