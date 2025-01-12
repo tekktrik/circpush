@@ -6,18 +6,18 @@
 test-prep:
 ifeq "$(OS)" "Windows_NT"
 	-@mkdir testmount
-	-@xcopy tests\assets\info_uf2.txt testmount
+	-@xcopy tests\assets\boot_out.txt testmount
 	-@subst T: testmount
 else ifeq "$(shell uname -s)" "Linux"
 	-@truncate testfs -s 1M
 	-@mkfs.vfat -F12 -S512 testfs
 	-@mkdir testmount
 	-@sudo mount -o loop,user,umask=000 testfs testmount/
-	-@cp tests/assets/info_uf2.txt testmount/
+	-@cp tests/assets/boot_out.txt testmount/
 else ifeq "$(shell uname -s)" "Darwin"
 	-@hdiutil create -size 512m -volname TESTMOUNT -fs FAT32 testfs.dmg
 	-@hdiutil attach testfs.dmg
-	-@cp tests/assets/info_uf2.txt /Volumes/TESTMOUNT
+	-@cp tests/assets/boot_out.txt /Volumes/TESTMOUNT
 else
 	@echo "Current OS not supported"
 	@exit 1
