@@ -172,6 +172,7 @@ mod test {
     mod ensure_app_dir {
 
         #[test]
+        #[serial_test::serial]
         fn successes() {
             let preexisted = crate::test_support::prepare_fresh_state();
             let app_dir = crate::cli::get_app_dir();
