@@ -101,7 +101,7 @@ impl FileLink {
             return true;
         }
 
-        // Get the source and destination file modification times
+        // Compare the source and destination file modification times
         let source_mtime = get_file_mtime(&self.source);
         let destination_mtime = get_file_mtime(&self.destination);
         source_mtime > destination_mtime
