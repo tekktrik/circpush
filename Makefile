@@ -29,7 +29,7 @@ test-run:
 	then \
 		export LD_LIBRARY_PATH=~/.pyenv/versions/3.13.0/lib; \
 	fi; \
-	cargo llvm-cov --html --jobs 1 --features test-support
+	cargo llvm-cov --html --features test-support
 
 .PHONY: test-clean
 test-clean:
