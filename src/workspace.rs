@@ -112,12 +112,9 @@ pub fn get_workspace_dir() -> PathBuf {
 }
 
 /// Ensure the workspace directory exists
-pub fn ensure_workspace_dir() -> Result<(), ()> {
+pub fn ensure_workspace_dir() {
     let dir = get_workspace_dir();
-    if fs::create_dir_all(dir).is_err() {
-        return Err(());
-    }
-    Ok(())
+    fs::create_dir_all(dir).expect("Could not create workspace directory");
 }
 
 /// Command handler for listing all workspaces
