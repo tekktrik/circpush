@@ -99,8 +99,7 @@ impl Workspace {
 
     /// Get the filename for a Workspace with the given name
     fn get_filepath_for_name(name: &str) -> PathBuf {
-        let mut filepath = crate::workspace::get_workspace_dir();
-        filepath.set_file_name(name);
+        let mut filepath = get_workspace_dir().join(name);
         filepath.set_extension(".json");
         filepath
     }
