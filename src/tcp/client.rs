@@ -49,7 +49,7 @@ fn communicate(request: Request) -> Result<Response, String> {
 /// Send a ping request to the server
 pub fn ping() -> Result<String, String> {
     match communicate(Request::Ping) {
-        Ok(Response::NoData) => Ok(String::from("Ping receieved!")),
+        Ok(Response::NoData) => Ok(String::from("Ping received!")),
         Err(error) => Err(error),
         _ => Err(String::from(
             "ERROR: Did not receive expected ping response",
