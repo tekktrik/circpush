@@ -35,25 +35,37 @@ test-run:
 test-clean:
 ifeq "$(OS)" "Windows_NT"
 	-@subst T: /d
-	-@python scripts/rmdir.py testmount
-	-@python scripts/rmdir.py tests/sandbox/circuitpython
+	-@python scripts\rmdir.py testmount
 else ifeq "$(shell uname -s)" "Linux"
 	-@sudo umount testmount
 	-@sudo rm -rf testmount
 	-@rm testfs -f
-	-@rm -rf tests/sandbox/circuitpython
-else
+else ifeq "$(shell uname -s)" "Darwin"
 	-@hdiutil detach /Volumes/TESTMOUNT
 	-@rm testfs.dmg -f
-	-@rm -rf tests/sandbox/circuitpython
+else
+	@echo "Current OS not supported"
+	@exit 1
 endif
 
 .PHONY: wipe-test-artifacts
 wipe-test-artifacts:
+ifeq "$(OS)" "Windows_NT"
+	-@python scripts\rmdir_test_config.py
+else
 	-@python scripts/rmdir_test_config.py
+endif
+
+.PHONY: check-test-artifacts
+check-test-artifacts:
+ifeq "$(OS)" "Windows_NT"
+	@python scripts\check_test_artifacts.py
+else
+	@python scripts/check_test_artifacts.py
+endif
 
 .PHONY: test
-test:
+test: check-test-artifacts
 	-@"${MAKE}" test-prep --no-print-directory
 	-@"${MAKE}" test-run --no-print-directory
 	-@"${MAKE}" test-clean --no-print-directory
