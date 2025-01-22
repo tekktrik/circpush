@@ -15,7 +15,7 @@ import sys
 import click
 
 test_config = click.get_app_dir(".circpush-test")
-if pathlib.Path(test_config).exists:
+if pathlib.Path(test_config).exists():
     print("Old test artifact exists, please remove before running tests.")
     print("Note that old workspaces and other information may be contained in the folder.")
     print("(You can run make wipe-test-artiacts to remove the test artifacts)")
