@@ -257,81 +257,109 @@ mod test {
 
     #[test]
     #[serial_test::serial]
+    /// Tests that the start monitor function returns an error if the server is not running
     fn start_monitor_error() {
+        // Get the expected error message
         let resp_msg = "ERROR: Could not start link";
 
+        // Get the response of the command
         let response = start_monitor(
             String::from("test"),
             PathBuf::from("test"),
             PathBuf::from("test"),
         );
 
+        // Check the error response
         let msg = response.unwrap_err();
         assert_eq!(&msg, resp_msg);
     }
 
     #[test]
     #[serial_test::serial]
+    /// Tests that the stop monitor function returns an error if the server is not running
     fn stop_monitor_error() {
+        // Get the expected error message
         let resp_msg = "ERROR: Could not stop link";
 
+        // Get the response of the command
         let response = stop_monitor(0);
 
+        // Check the error response
         let msg = response.unwrap_err();
         assert_eq!(&msg, resp_msg);
     }
 
     #[test]
     #[serial_test::serial]
+    /// Tests that the get monitor list function returns an error if the server is not running
     fn get_monitor_list_error() {
+        // Get the expected error message
         let resp_msg = "ERROR: Could not retrieve link(s)";
 
+        // Get the response of the command
         let response = get_monitor_list(1);
 
+        // Check the error response
         let msg = response.unwrap_err();
         assert_eq!(&msg, resp_msg);
     }
 
     #[test]
     #[serial_test::serial]
+    /// Tests that the save workspace function returns an error if the server is not running
     fn save_workspace_error() {
+        // Get the expected error message
         let resp_msg = "ERROR: Could not retrieve link(s)";
 
+        // Get the response of the command
         let response = save_workspace("test", "test", false);
 
+        // Check the error response
         let msg = response.unwrap_err();
         assert_eq!(&msg, resp_msg);
     }
 
     #[test]
     #[serial_test::serial]
+    /// Tests that the set workspace name function returns an error if the server is not runnin
     fn set_workspace_name_error() {
+        // Get the expected error message
         let resp_msg = "ERROR: Did not receive expected response";
 
+        // Get the response of the command
         let response = set_workspace_name("test");
 
+        // Check the error response
         let msg = response.unwrap_err();
         assert_eq!(&msg, resp_msg);
     }
 
     #[test]
     #[serial_test::serial]
+    /// Tests that the load workspace function returns an error if the server is not runnin
     fn load_workspace_error() {
+        // Get the expected error message
         let resp_msg = "ERROR: Could not load the workspace";
 
+        // Get the response of the command
         let response = load_workspace("doesnotexist");
 
+        // Check the error response
         let msg = response.unwrap_err();
         assert_eq!(&msg, resp_msg);
     }
 
     #[test]
     #[serial_test::serial]
+    /// Tests that the get current workspace function returns an error if the server is not runnin
     fn get_current_workspace_error() {
+        // Get the expected error message
         let resp_msg = "ERROR: Could not retrieve workspace name";
 
+        // Get the response of the command
         let response = get_current_workspace();
 
+        // Check the error response
         let msg = response.unwrap_err();
         assert_eq!(&msg, resp_msg);
     }
