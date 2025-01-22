@@ -95,7 +95,7 @@ pub fn stop_monitor(number: usize) -> Result<String, String> {
     match communicate(Request::StopLink { number }) {
         Ok(Response::Message { msg }) => Ok(msg),
         Ok(Response::ErrorMessage { msg }) => Err(msg),
-        _ => return Err(String::from("ERROR: Could not stop link")),
+        _ => Err(String::from("ERROR: Could not stop link")),
     }
 }
 
@@ -182,7 +182,7 @@ pub fn load_workspace(name: &str) -> Result<String, String> {
             file_monitor.write_directory,
             file_monitor.base_directory,
         )
-        .expect(&format!("Could not start all file monitors"));
+        .expect("Could not start all file monitors");
     }
 
     set_workspace_name(name).expect("Could not set the name for the workspace");
