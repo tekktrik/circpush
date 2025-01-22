@@ -25,13 +25,16 @@ mod test {
 
     #[test]
     #[serial_test::serial]
-    fn states() {
+    /// Tests the ability to detect a connected CircuitPython board
+    fn detection() {
+        // Find the connected CircuitPython board
         let mount_point: PathBuf = find_circuitpy().expect("Could not find CircuitPython board");
 
+        // Get the filename and filepath of the boot_out.txt file
         let filename = "boot_out.txt";
-
         let bootout_filepath = mount_point.join(&filename);
 
+        // Get the filepath of the boot_out.txt test asset file
         let current_filepath = PathBuf::from(file!());
         let parent_filepath = current_filepath.parent().unwrap();
         let grandparent_filepath = parent_filepath.parent().unwrap();
@@ -39,14 +42,19 @@ mod test {
             .join("tests")
             .join("assets")
             .join(&filename);
+
+        // Get the contents of the boot_out.txt test asset file
         let boutout_contents =
             fs::read_to_string(&asset_filepath).expect("Could not read test asset of boot_out.txt");
 
+        // Delete the boot_out.txt on the connected mount
         fs::remove_file(&bootout_filepath).expect("Could not delete file");
         assert!(!bootout_filepath.exists());
 
+        // Assert that the board is no longer detected
         assert!(find_circuitpy().is_none());
 
+        // Return the boot_out.txt file to the connected mount
         fs::write(&bootout_filepath, &boutout_contents)
             .expect("Could not copy test bootout file after test");
         assert!(bootout_filepath.exists());
