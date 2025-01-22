@@ -1,7 +1,7 @@
 use crate::commands::{Request, Response, STOP_RESPONSE};
 use crate::monitor::{as_table, FileMonitor};
-use crate::workspace::{Workspace, WorkspaceLoadError};
 use crate::tcp::server::PORT;
+use crate::workspace::{Workspace, WorkspaceLoadError};
 use serde::Deserialize;
 use std::io::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
@@ -60,9 +60,7 @@ pub fn ping() -> Result<String, String> {
 pub fn echo(message: String) -> Result<String, String> {
     match communicate(Request::Echo { msg: message }) {
         Ok(Response::Message { msg }) => Ok(msg),
-        _ => Err(String::from(
-            "ERROR: Did not receive echo response",
-        )),
+        _ => Err(String::from("ERROR: Did not receive echo response")),
     }
 }
 
@@ -110,7 +108,8 @@ fn get_monitor_list(number: usize) -> Result<Vec<FileMonitor>, String> {
     };
 
     // Parse the response string into a list of FileMonitors
-    let monitors: Vec<FileMonitor> = serde_json::from_str(&response).expect("Failed to parse JSON response");
+    let monitors: Vec<FileMonitor> =
+        serde_json::from_str(&response).expect("Failed to parse JSON response");
     Ok(monitors)
 }
 
@@ -142,19 +141,23 @@ pub fn save_workspace(name: &str, desc: &str, force: bool) -> Result<String, Str
 
     // Save the workspace
     match workspace.save_as_name(name, force) {
-        Ok(_) => Ok(format!("Saved the current set of file monitors as workspace '{name}'")),
-        Err(_) => Err(format!("Workspace '{name}' already exists, use --force to overwrite it")),
+        Ok(_) => Ok(format!(
+            "Saved the current set of file monitors as workspace '{name}'"
+        )),
+        Err(_) => Err(format!(
+            "Workspace '{name}' already exists, use --force to overwrite it"
+        )),
         // Err(WorkspaceSaveError::BadFileSave) => Err(format!("Could not save workspace '{name}'")),
     }
 }
 
 /// Sets the workspace name
 pub fn set_workspace_name(name: &str) -> Result<String, String> {
-    match communicate(Request::SetWorkspaceName { name: name.to_owned() }) {
+    match communicate(Request::SetWorkspaceName {
+        name: name.to_owned(),
+    }) {
         Ok(Response::NoData) => Ok(format!("Workspace name set to '{name}'")),
-        _ => Err(String::from(
-            "ERROR: Did not receive expected response",
-        )),
+        _ => Err(String::from("ERROR: Did not receive expected response")),
     }
 }
 
@@ -167,12 +170,19 @@ pub fn load_workspace(name: &str) -> Result<String, String> {
 
     let workspace = match Workspace::from_name(name) {
         Ok(workspace) => workspace,
-        Err(WorkspaceLoadError::UnexpectedFormat) => return Err(format!("Could not parse the format of workspace '{name}'")),
+        Err(WorkspaceLoadError::UnexpectedFormat) => {
+            return Err(format!("Could not parse the format of workspace '{name}'"))
+        }
         Err(_) => return Err(format!("Workspace '{name}' does not exist")),
     };
 
     for file_monitor in workspace.monitors {
-        start_monitor(file_monitor.read_pattern, file_monitor.write_directory, file_monitor.base_directory).expect(&format!("Could not start all file monitors"));
+        start_monitor(
+            file_monitor.read_pattern,
+            file_monitor.write_directory,
+            file_monitor.base_directory,
+        )
+        .expect(&format!("Could not start all file monitors"));
     }
 
     set_workspace_name(name).expect("Could not set the name for the workspace");
@@ -207,9 +217,9 @@ mod test {
         // Get the expected error message
         let expected_err = "ERROR: Did not receive expected ping response";
 
-        // Get the response of the ping command
+        // Get the response of the command
         let response = ping();
-        
+
         // Check the error response
         let err_msg = response.unwrap_err();
         assert_eq!(&err_msg, expected_err);
@@ -217,24 +227,30 @@ mod test {
 
     #[test]
     #[serial_test::serial]
-    /// Tests that the echp function returns an error if the server is not running
+    /// Tests that the echo function returns an error if the server is not running
     fn echo_error() {
+        // Get the expected error message
         let expected_err = "ERROR: Did not receive echo response";
-        
+
+        // Get the response of the command
         let response = echo(String::from("testmsg"));
-        
+
+        // Check the error response
         let err_msg = response.unwrap_err();
         assert_eq!(&err_msg, expected_err);
     }
 
-
     #[test]
     #[serial_test::serial]
+    /// Tests that the stop server function returns an error if the server is not running
     fn stop_server_error() {
+        // Get the expected error message
         let expected_err = "ERROR: Did not receive expected response";
-        
+
+        // Get the response of the command
         let response = stop_server();
-        
+
+        // Check the error response
         let err_msg = response.unwrap_err();
         assert_eq!(&err_msg, expected_err);
     }
@@ -243,10 +259,13 @@ mod test {
     #[serial_test::serial]
     fn start_monitor_error() {
         let resp_msg = "ERROR: Could not start link";
-        
+
         let response = start_monitor(
-            String::from("test"), PathBuf::from("test"), PathBuf::from("test"));
-        
+            String::from("test"),
+            PathBuf::from("test"),
+            PathBuf::from("test"),
+        );
+
         let msg = response.unwrap_err();
         assert_eq!(&msg, resp_msg);
     }

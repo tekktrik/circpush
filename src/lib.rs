@@ -18,7 +18,6 @@ use clap::{Parser, Subcommand};
 use crate::board::find_circuitpy;
 use crate::filetree::ensure_app_dir;
 
-
 /// Python module created using PyO3 (circpush)
 #[pymodule]
 pub mod circpush {
@@ -110,7 +109,9 @@ enum WorkspaceCommand {
         #[arg(short, long, default_value_t = false)]
         force: bool,
     },
-    Load { name: String },
+    Load {
+        name: String,
+    },
     List,
     View {
         name: String,
@@ -118,8 +119,13 @@ enum WorkspaceCommand {
         absolute: bool,
     },
     Current,
-    Delete { name: String },
-    Rename { orig: String, new: String},
+    Delete {
+        name: String,
+    },
+    Rename {
+        orig: String,
+        new: String,
+    },
 }
 
 /// Main entry for the CLI
@@ -178,26 +184,34 @@ fn server_subentry(server_command: ServerCommand) -> Result<String, String> {
 /// Workspace command subentry, for performing the appropriate command
 fn workspace_subentry(workspace_command: WorkspaceCommand) -> Result<String, String> {
     match workspace_command {
-        WorkspaceCommand::Save { name, description, force } => {
-            let desc =  description.unwrap_or_default();
+        WorkspaceCommand::Save {
+            name,
+            description,
+            force,
+        } => {
+            let desc = description.unwrap_or_default();
             crate::tcp::client::save_workspace(&name, &desc, force)
-        },
+        }
         WorkspaceCommand::Load { name } => crate::tcp::client::load_workspace(&name),
         WorkspaceCommand::List => crate::workspace::list_workspaces(),
-        WorkspaceCommand::View { name, absolute } => crate::workspace::view_workspace(&name, absolute),
+        WorkspaceCommand::View { name, absolute } => {
+            crate::workspace::view_workspace(&name, absolute)
+        }
         WorkspaceCommand::Current => crate::tcp::client::get_current_workspace(),
         WorkspaceCommand::Delete { name } => crate::workspace::delete_workspace(&name),
         WorkspaceCommand::Rename { orig, new } => crate::workspace::rename_workspace(&orig, &new),
     }
 }
 
-
-#[cfg(feature="test-support")]
+#[cfg(feature = "test-support")]
 pub mod test_support {
 
     use super::*;
 
-    use std::{fs, path::{Path, PathBuf}};
+    use std::{
+        fs,
+        path::{Path, PathBuf},
+    };
 
     pub const TEST_APP_DIRECTORY_NAME: &str = ".circpush-test";
 
@@ -218,7 +232,8 @@ pub mod test_support {
             let copy_options = fs_extra::dir::CopyOptions::new();
 
             fs::create_dir(&test_directory).expect("Could not create test application directory");
-            fs_extra::dir::move_dir(&app_directory, &test_directory, &copy_options).expect("Could not rename existing application directory");
+            fs_extra::dir::move_dir(&app_directory, &test_directory, &copy_options)
+                .expect("Could not rename existing application directory");
         }
         crate::filetree::ensure_app_dir();
         crate::filetree::ensure_workspace_dir();
@@ -229,15 +244,17 @@ pub mod test_support {
         let app_directory = crate::filetree::get_app_dir();
         let test_directory = get_test_directory();
 
-        let copy_options= fs_extra::dir::CopyOptions::new();
+        let copy_options = fs_extra::dir::CopyOptions::new();
 
-        fs::remove_dir_all(crate::filetree::get_app_dir()).expect("Could not delete test directory");
+        fs::remove_dir_all(crate::filetree::get_app_dir())
+            .expect("Could not delete test directory");
 
         fs_extra::dir::move_dir(
             &test_directory.join(env!("CARGO_PKG_NAME")),
             &app_directory.parent().expect("Could not get config folder"),
-            &copy_options
-        ).expect("Could not restore application directory");
+            &copy_options,
+        )
+        .expect("Could not restore application directory");
 
         fs::remove_dir_all(test_directory).expect("Could not delete test application folder");
     }
@@ -273,30 +290,43 @@ pub mod test_support {
                 continue;
             }
 
-            for part  in line.split("|") {
+            for part in line.split("|") {
                 line_parts.push(part.trim().to_string())
-                
             }
 
-            let (_first, line_parts) = line_parts.split_first().expect("Could not remove the first element");
-            let (_last, line_parts) = line_parts.split_last().expect("Could not remove the last element");
+            let (_first, line_parts) = line_parts
+                .split_first()
+                .expect("Could not remove the first element");
+            let (_last, line_parts) = line_parts
+                .split_last()
+                .expect("Could not remove the last element");
             all_parts.push(line_parts.to_vec());
         }
 
         all_parts
     }
 
-    pub fn generate_expected_parts<B, W>(path_components: &[(B, W)], link_num: usize, name_line: Option<&str>) -> Vec<Vec<String>>
+    pub fn generate_expected_parts<B, W>(
+        path_components: &[(B, W)],
+        link_num: usize,
+        name_line: Option<&str>,
+    ) -> Vec<Vec<String>>
     where
-    B: AsRef<Path>,
-    W: AsRef<Path>, {
+        B: AsRef<Path>,
+        W: AsRef<Path>,
+    {
         let mut components = Vec::new();
 
         if let Some(name_line_str) = name_line {
             components.push(vec![name_line_str.to_owned()]);
         }
 
-        let header_str = vec!["Link #", "Read Pattern", "Base Directory", "Write Directory"];
+        let header_str = vec![
+            "Link #",
+            "Read Pattern",
+            "Base Directory",
+            "Write Directory",
+        ];
         let header = header_str.iter().map(|e| e.to_string()).collect();
 
         components.push(header);
@@ -310,8 +340,18 @@ pub mod test_support {
             };
 
             let mut components_str = vec![&number_str, "test*"];
-            components_str.push(base_directory.as_ref().to_str().expect("Could not convert path to string"));
-            components_str.push(write_directory.as_ref().to_str().expect("Could not convert path to string"));
+            components_str.push(
+                base_directory
+                    .as_ref()
+                    .to_str()
+                    .expect("Could not convert path to string"),
+            );
+            components_str.push(
+                write_directory
+                    .as_ref()
+                    .to_str()
+                    .expect("Could not convert path to string"),
+            );
 
             let line_components = components_str.iter().map(|e| e.to_string()).collect();
 

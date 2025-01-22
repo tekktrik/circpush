@@ -2,13 +2,13 @@ use crate::link::FileLink;
 use glob::glob;
 use pathdiff::diff_paths;
 use serde::{Deserialize, Serialize};
-use tabled::{builder::Builder, Table};
 use std::{
     collections::HashSet,
     env,
     hash::Hash,
     path::{absolute, Path, PathBuf},
 };
+use tabled::{builder::Builder, Table};
 
 /// File monitor update errors
 #[derive(Debug, PartialEq, Eq)]
@@ -42,11 +42,7 @@ pub struct FileMonitor {
 impl FileMonitor {
     /// Creates a new FileMonitor, given the glob pattern for sources, the base directory,
     /// and relative write directory, with an emptry set of monitored file links
-    pub fn new(
-        read_pattern: &str,
-        write_directory: &Path,
-        base_directory: &Path,
-    ) -> Self {
+    pub fn new(read_pattern: &str, write_directory: &Path, base_directory: &Path) -> Self {
         Self {
             read_pattern: read_pattern.to_string(),
             write_directory: write_directory.to_path_buf(),
@@ -123,7 +119,9 @@ impl FileMonitor {
                 new_filelink
                     .ensure_writepath()
                     .expect("Could not ensure write path");
-                new_filelink.update().expect("Unable to update the file link");
+                new_filelink
+                    .update()
+                    .expect("Unable to update the file link");
             }
         }
 
@@ -245,16 +243,19 @@ mod tests {
         use super::*;
 
         fn get_monitor() -> (FileMonitor, TempDir, TempDir) {
-            let read_directory = TempDir::new().expect("Could not get the temporary read directory");
+            let read_directory =
+                TempDir::new().expect("Could not get the temporary read directory");
             for i in 0..4 {
                 let filename = format!("test_file{i}");
-                fs::File::create_new(read_directory.path().join(&filename)).expect(&format!("Could not create {filename}"));
+                fs::File::create_new(read_directory.path().join(&filename))
+                    .expect(&format!("Could not create {filename}"));
             }
 
-            let write_directory = TempDir::new().expect("Could not get the temporary write directory");
+            let write_directory =
+                TempDir::new().expect("Could not get the temporary write directory");
 
             let read_pattern = "test*";
-            
+
             let monitor = FileMonitor {
                 read_pattern: read_pattern.to_string(),
                 write_directory: write_directory.path().to_path_buf(),
@@ -270,7 +271,8 @@ mod tests {
             let read_pattern = "test_file";
             let write_directory = TempDir::new().expect("Could not get temporary directory");
             let base_directory = TempDir::new().expect("Could not get temporary directory");
-            let monitor = FileMonitor::new(&read_pattern, write_directory.path(), base_directory.path());
+            let monitor =
+                FileMonitor::new(&read_pattern, write_directory.path(), base_directory.path());
 
             assert_eq!(monitor.read_pattern, read_pattern);
             assert_eq!(monitor.write_directory, write_directory.into_path());
@@ -290,7 +292,9 @@ mod tests {
                 let filename = "test_file1";
                 let filepath = read_dir.path().join(&filename);
 
-                let write_path = monitor.get_write_path(&filepath).expect("Could not get write path for the file");
+                let write_path = monitor
+                    .get_write_path(&filepath)
+                    .expect("Could not get write path for the file");
                 let intended_path = write_dir.path().join(&filename);
 
                 assert_eq!(write_path, intended_path);
@@ -299,8 +303,11 @@ mod tests {
             #[test]
             fn error() {
                 let (monitor, _read_dir, _write_dir) = get_monitor();
-                let relative_path = &PathBuf::from_str("relative_path").expect("Could not get a path for the test variable");
-                let error = monitor.get_write_path(&relative_path).expect_err("Successfully calculated write path when it should have been impossible");
+                let relative_path = &PathBuf::from_str("relative_path")
+                    .expect("Could not get a path for the test variable");
+                let error = monitor.get_write_path(&relative_path).expect_err(
+                    "Successfully calculated write path when it should have been impossible",
+                );
                 assert_eq!(error, PathError::NoRelative);
             }
         }
@@ -312,14 +319,17 @@ mod tests {
             #[test]
             fn success() {
                 let (monitor, read_dir, write_dir) = get_monitor();
-                let files = monitor.calculate_monitored_files().expect("Could not calculate the monitored files");
+                let files = monitor
+                    .calculate_monitored_files()
+                    .expect("Could not calculate the monitored files");
 
                 assert_eq!(files.len(), 4);
                 for i in 0..4 {
                     let filename = format!("test_file{i}");
                     let read_filepath = read_dir.path().join(&filename);
                     let write_filepath = write_dir.path().join(&filename);
-                    let link = FileLink::new(&read_filepath, &write_filepath).expect("Could not create file link");
+                    let link = FileLink::new(&read_filepath, &write_filepath)
+                        .expect("Could not create file link");
                     assert!(files.contains(&link));
                 }
             }
@@ -329,7 +339,9 @@ mod tests {
                 let (mut monitor, _read_dir, _write_dir) = get_monitor();
                 monitor.read_pattern = "text[text".to_string();
 
-                let error = monitor.calculate_monitored_files().expect_err("Matched bad glob pattern");
+                let error = monitor
+                    .calculate_monitored_files()
+                    .expect_err("Matched bad glob pattern");
                 assert_eq!(error, UpdateError::PartialGlobMatch);
             }
         }
@@ -340,18 +352,17 @@ mod tests {
 
             use filetime::{set_file_mtime, FileTime};
 
-
             #[test]
             fn modification() {
                 let (mut monitor, read_dir, write_dir) = get_monitor();
-                
+
                 let name0 = "test_file0";
                 let read_path0 = read_dir.path().join(&name0);
                 let write_path0 = write_dir.path().join(&name0);
 
                 let contents0 = "updated";
                 fs::write(&read_path0, contents0).expect("Could not write to the first file");
-                
+
                 assert!(read_path0.exists());
                 assert!(!write_path0.exists());
 
@@ -361,7 +372,8 @@ mod tests {
                 assert!(read_path0.exists());
                 assert!(write_path0.exists());
 
-                let updated0 = fs::read_to_string(&read_path0).expect("Could not read the first test file");
+                let updated0 =
+                    fs::read_to_string(&read_path0).expect("Could not read the first test file");
                 assert_eq!(&updated0, contents0);
             }
 
@@ -372,9 +384,9 @@ mod tests {
                 let name1 = "test_file1";
                 let read_path1 = read_dir.path().join(&name1);
                 let write_path1 = write_dir.path().join(&name1);
-                
+
                 fs::remove_file(&read_path1).expect("Could not delete the second test file");
-                
+
                 assert!(!read_path1.exists());
                 assert!(!write_path1.exists());
 
@@ -396,8 +408,9 @@ mod tests {
                 let write_path2 = write_dir.path().join(&name2);
 
                 let write_contents2 = "testdata";
-                fs::write(&write_path2, write_contents2).expect("Could not write to the third test file");
-                
+                fs::write(&write_path2, write_contents2)
+                    .expect("Could not write to the third test file");
+
                 assert!(read_path2.exists());
                 assert!(write_path2.exists());
 
@@ -408,7 +421,8 @@ mod tests {
                 assert!(read_path2.exists());
                 assert!(write_path2.exists());
 
-                let updated2 = fs::read_to_string(&write_path2).expect("Could not read the thrid test file");
+                let updated2 =
+                    fs::read_to_string(&write_path2).expect("Could not read the thrid test file");
                 assert_eq!(&updated2, write_contents2);
             }
 
@@ -440,8 +454,9 @@ mod tests {
                 let write_path4 = write_dir.path().join(&name4);
 
                 let contents4 = "newdata";
-                fs::write(&read_path4, contents4).expect("Could not create and write to the fifth test file");
-                
+                fs::write(&read_path4, contents4)
+                    .expect("Could not create and write to the fifth test file");
+
                 assert!(read_path4.exists());
                 assert!(!write_path4.exists());
 
@@ -451,7 +466,8 @@ mod tests {
                 // Check results of updating the fifth test file
                 assert!(read_path4.exists());
                 assert!(write_path4.exists());
-                let updated4 = fs::read_to_string(&write_path4).expect("Could not read the fifth test file");
+                let updated4 =
+                    fs::read_to_string(&write_path4).expect("Could not read the fifth test file");
                 assert_eq!(&updated4, contents4);
             }
 
@@ -466,9 +482,12 @@ mod tests {
                 let write_contents5 = "oldtext";
                 let contents5 = "newtext";
                 assert_ne!(write_contents5, contents5);
-                fs::write(&write_path5, &write_contents5).expect("Could not write to the write directory for the sixth file");
-                fs::write(&read_path5, &contents5).expect("Could not write to the read directory for the sixth file");
-                set_file_mtime(&write_path5, FileTime::from_unix_time(0, 0)).expect("Could not set file modification time");
+                fs::write(&write_path5, &write_contents5)
+                    .expect("Could not write to the write directory for the sixth file");
+                fs::write(&read_path5, &contents5)
+                    .expect("Could not write to the read directory for the sixth file");
+                set_file_mtime(&write_path5, FileTime::from_unix_time(0, 0))
+                    .expect("Could not set file modification time");
                 assert!(read_path5.exists());
                 assert!(write_path5.exists());
 
@@ -478,7 +497,8 @@ mod tests {
                 // Check results of updating the sixth test file
                 assert!(read_path5.exists());
                 assert!(write_path5.exists());
-                let updated5 = fs::read_to_string(&write_path5).expect("Could not read the sixth test file");
+                let updated5 =
+                    fs::read_to_string(&write_path5).expect("Could not read the sixth test file");
                 assert_eq!(&updated5, contents5);
             }
 
@@ -491,12 +511,15 @@ mod tests {
                 let write_path = write_dir.path().join(&name);
 
                 fs::File::create_new(&write_path).expect("Could not create file");
-                let link = FileLink::new(&read_path, &write_path).expect("Could not create file link");
+                let link =
+                    FileLink::new(&read_path, &write_path).expect("Could not create file link");
                 monitor.links.insert(link);
 
                 fs::remove_file(&read_path).expect("Could not delete filed");
 
-                monitor.update_links().expect("Unable to delete file as part of update");
+                monitor
+                    .update_links()
+                    .expect("Unable to delete file as part of update");
 
                 assert!(!write_path.exists());
             }
@@ -510,11 +533,14 @@ mod tests {
                 let write_file = write_dir.path().join(&name);
 
                 fs::File::create_new(&read_file).expect("Could not create file");
-                let link = FileLink::new(&read_file, &write_file).expect("Could not create file link");
+                let link =
+                    FileLink::new(&read_file, &write_file).expect("Could not create file link");
                 fs::remove_file(&read_file).expect("Could not delete file");
                 monitor.links.insert(link);
 
-                let error = monitor.update_links().expect_err("Successfully updated broken link");
+                let error = monitor
+                    .update_links()
+                    .expect_err("Successfully updated broken link");
                 assert_eq!(error, UpdateError::FileIOError);
             }
 
@@ -523,7 +549,9 @@ mod tests {
                 let (mut monitor, _read_dir, _write_dir) = get_monitor();
                 monitor.read_pattern = "text[text".to_string();
 
-                let error = monitor.update_links().expect_err("Matched bad glob pattern");
+                let error = monitor
+                    .update_links()
+                    .expect_err("Matched bad glob pattern");
                 assert_eq!(error, UpdateError::PartialGlobMatch);
             }
         }
@@ -539,11 +567,7 @@ mod tests {
                 let read_pattern = monitor.read_pattern;
                 let write_directory = monitor.write_directory.to_str().unwrap().to_string();
                 let base_directory = monitor.base_directory.to_str().unwrap().to_string();
-                let expected = vec![
-                    read_pattern,
-                    base_directory,
-                    write_directory,
-                ];
+                let expected = vec![read_pattern, base_directory, write_directory];
                 assert_eq!(table, expected);
             }
 
@@ -554,13 +578,17 @@ mod tests {
                 let table = monitor.to_table_record(false);
                 let read_pattern = monitor.read_pattern;
                 let current_dir = env::current_dir().expect("Could not get the current directory");
-                let base_directory = diff_paths(&monitor.base_directory, &current_dir).unwrap().to_str().unwrap().to_string();
-                let write_directory = diff_paths(&monitor.write_directory, &current_dir).unwrap().to_str().unwrap().to_string();
-                let expected = vec![
-                    read_pattern,
-                    base_directory,
-                    write_directory,
-                ];
+                let base_directory = diff_paths(&monitor.base_directory, &current_dir)
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .to_string();
+                let write_directory = diff_paths(&monitor.write_directory, &current_dir)
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .to_string();
+                let expected = vec![read_pattern, base_directory, write_directory];
                 assert_eq!(table, expected);
             }
 
@@ -569,18 +597,21 @@ mod tests {
             fn relative_to_base() {
                 let (monitor, _read_dir, _write_dir) = get_monitor();
                 let current_dir = env::current_dir().expect("Could not get the current directory");
-                env::set_current_dir(&monitor.base_directory).expect("Could not set the current directory for the test");
+                env::set_current_dir(&monitor.base_directory)
+                    .expect("Could not set the current directory for the test");
                 let table = monitor.to_table_record(false);
                 let read_pattern = monitor.read_pattern;
                 let base_directory = String::from(".");
-                let write_directory = diff_paths(&monitor.write_directory, &env::current_dir().unwrap()).unwrap().to_str().unwrap().to_string();
-                let expected = vec![
-                    read_pattern,
-                    base_directory,
-                    write_directory,
-                ];
+                let write_directory =
+                    diff_paths(&monitor.write_directory, &env::current_dir().unwrap())
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_string();
+                let expected = vec![read_pattern, base_directory, write_directory];
                 assert_eq!(table, expected);
-                env::set_current_dir(&current_dir).expect("Could not reset the current directory for the test");
+                env::set_current_dir(&current_dir)
+                    .expect("Could not reset the current directory for the test");
                 assert_eq!(env::current_dir().unwrap(), current_dir);
             }
 
@@ -589,18 +620,21 @@ mod tests {
             fn relative_to_write() {
                 let (monitor, _read_dir, _write_dir) = get_monitor();
                 let current_dir = env::current_dir().expect("Could not get the current directory");
-                env::set_current_dir(&monitor.write_directory).expect("Could not set the current directory for the test");
+                env::set_current_dir(&monitor.write_directory)
+                    .expect("Could not set the current directory for the test");
                 let table = monitor.to_table_record(false);
                 let read_pattern = monitor.read_pattern;
-                let base_directory = diff_paths(&monitor.base_directory, &env::current_dir().unwrap()).unwrap().to_str().unwrap().to_string();
+                let base_directory =
+                    diff_paths(&monitor.base_directory, &env::current_dir().unwrap())
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_string();
                 let write_directory = String::from(".");
-                let expected = vec![
-                    read_pattern,
-                    base_directory,
-                    write_directory,
-                ];
+                let expected = vec![read_pattern, base_directory, write_directory];
                 assert_eq!(table, expected);
-                env::set_current_dir(&current_dir).expect("Could not reset the current directory for the test");
+                env::set_current_dir(&current_dir)
+                    .expect("Could not reset the current directory for the test");
                 assert_eq!(env::current_dir().unwrap(), current_dir);
             }
         }
@@ -656,7 +690,8 @@ mod tests {
                 let read_file = read_dir.path().join(&name);
                 let write_file = write_dir.path().join(&name);
                 fs::File::create_new(&read_file).expect("Could not create file");
-                let link = FileLink::new(&read_file, &write_file).expect("Could not create file link");
+                let link =
+                    FileLink::new(&read_file, &write_file).expect("Could not create file link");
                 monitor1.links.insert(link);
                 assert_eq!(monitor0, monitor1);
             }
@@ -698,7 +733,7 @@ mod tests {
             fn identical() {
                 let (monitor0, _read_dir, _write_dir) = get_monitor();
                 let monitor1 = monitor0.clone();
-                
+
                 let mut hasher0 = DefaultHasher::new();
                 monitor0.hash(&mut hasher0);
                 let mut hasher1 = DefaultHasher::new();
@@ -715,7 +750,8 @@ mod tests {
                 let read_file = read_dir.path().join(&name);
                 let write_file = write_dir.path().join(&name);
                 fs::File::create_new(&read_file).expect("Could not create file");
-                let link = FileLink::new(&read_file, &write_file).expect("Could not create file link");
+                let link =
+                    FileLink::new(&read_file, &write_file).expect("Could not create file link");
                 monitor1.links.insert(link);
 
                 let mut hasher0 = DefaultHasher::new();
@@ -731,7 +767,7 @@ mod tests {
                 let (monitor0, _read_dir, _write_dir) = get_monitor();
                 let mut monitor1 = monitor0.clone();
                 monitor1.read_pattern = String::from("different");
-                
+
                 let mut hasher0 = DefaultHasher::new();
                 monitor0.hash(&mut hasher0);
                 let mut hasher1 = DefaultHasher::new();
@@ -746,7 +782,7 @@ mod tests {
                 let mut monitor1 = monitor0.clone();
                 let tempdir = TempDir::new().expect("Could not create new temporary directory");
                 monitor1.base_directory = tempdir.path().to_path_buf();
-                
+
                 let mut hasher0 = DefaultHasher::new();
                 monitor0.hash(&mut hasher0);
                 let mut hasher1 = DefaultHasher::new();
@@ -761,7 +797,7 @@ mod tests {
                 let mut monitor1 = monitor0.clone();
                 let tempdir = TempDir::new().expect("Could not create new temporary directory");
                 monitor1.write_directory = tempdir.path().to_path_buf();
-                
+
                 let mut hasher0 = DefaultHasher::new();
                 monitor0.hash(&mut hasher0);
                 let mut hasher1 = DefaultHasher::new();

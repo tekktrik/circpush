@@ -30,7 +30,6 @@ mod test {
 
     use super::*;
 
-
     #[test]
     fn get_app_dir() {
         let app_dir = super::get_app_dir();

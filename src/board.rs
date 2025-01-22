@@ -35,15 +35,20 @@ mod test {
         let current_filepath = PathBuf::from(file!());
         let parent_filepath = current_filepath.parent().unwrap();
         let grandparent_filepath = parent_filepath.parent().unwrap();
-        let asset_filepath = grandparent_filepath.join("tests").join("assets").join(&filename);
-        let boutout_contents = fs::read_to_string(&asset_filepath).expect("Could not read test asset of boot_out.txt");
+        let asset_filepath = grandparent_filepath
+            .join("tests")
+            .join("assets")
+            .join(&filename);
+        let boutout_contents =
+            fs::read_to_string(&asset_filepath).expect("Could not read test asset of boot_out.txt");
 
         fs::remove_file(&bootout_filepath).expect("Could not delete file");
         assert!(!bootout_filepath.exists());
 
         assert!(find_circuitpy().is_none());
 
-        fs::write(&bootout_filepath, &boutout_contents).expect("Could not copy test bootout file after test");
+        fs::write(&bootout_filepath, &boutout_contents)
+            .expect("Could not copy test bootout file after test");
         assert!(bootout_filepath.exists());
     }
 }

@@ -85,11 +85,7 @@ fn handle_connection(mut stream: TcpStream, state: &mut ServerState) -> bool {
             base_directory,
         } => {
             // Create a new FileMonitor
-            let new_monitor = FileMonitor::new(
-                read_pattern,
-                write_directory,
-                base_directory,
-            );
+            let new_monitor = FileMonitor::new(read_pattern, write_directory, base_directory);
 
             // Push the new FileMonitor to the lists
             monitors.push(new_monitor);
@@ -162,10 +158,10 @@ fn handle_connection(mut stream: TcpStream, state: &mut ServerState) -> bool {
                 Response::Links { json: monitor_json }
             }
         }
-        Request::ViewWorkspaceName => {
-            Response::Message { msg: workspace_name.clone() }
+        Request::ViewWorkspaceName => Response::Message {
+            msg: workspace_name.clone(),
         },
-        Request::SetWorkspaceName { name} => {
+        Request::SetWorkspaceName { name } => {
             *workspace_name = name.clone();
             Response::NoData
         }
@@ -219,9 +215,8 @@ pub fn run_server() -> String {
                         .monitors
                         .retain(|monitor| monitor.write_directory_exists());
                 }
-            }
-            // Any other errors
-            // Err(_e) => panic!("Could not accept incoming connection"),
+            } // Any other errors
+              // Err(_e) => panic!("Could not accept incoming connection"),
         }
         sleep(sleep_duration); // TODO: Remove later?
     }

@@ -57,7 +57,9 @@ impl Workspace {
 
     /// Save a Workspace as a file at the given filepath
     pub fn save_as_filepath<P>(&self, filepath: P) -> Result<(), WorkspaceSaveError>
-    where P: AsRef<Path> {
+    where
+        P: AsRef<Path>,
+    {
         // Create the new workspace file
         let writer = match fs::File::create(filepath.as_ref()) {
             Ok(writer) => writer,
@@ -66,11 +68,15 @@ impl Workspace {
 
         // Get the file monitors without file links
         let mut linkless = self.clone();
-        linkless.monitors.iter_mut().for_each(|m| *m = m.clone_linkless());
+        linkless
+            .monitors
+            .iter_mut()
+            .for_each(|m| *m = m.clone_linkless());
 
         // Pretty print save the Workspace JSON object
-        serde_json::to_writer_pretty(writer, &linkless).expect("Could not delete file after failing to create workspace file");
-        
+        serde_json::to_writer_pretty(writer, &linkless)
+            .expect("Could not delete file after failing to create workspace file");
+
         Ok(())
     }
 
@@ -139,7 +145,7 @@ pub fn list_workspaces() -> Result<String, String> {
 
         // Create the string from the sorted workspace names
         let mut workspace_msg = String::new();
-        workspace_names.iter().for_each(|n| { 
+        workspace_names.iter().for_each(|n| {
             workspace_msg.push_str(n);
             workspace_msg.push('\n');
         });
@@ -186,14 +192,16 @@ pub fn view_workspace(name: &str, absolute: bool) -> Result<String, String> {
     // Get the Workspace with the given name
     let workspace = match Workspace::from_name(name) {
         Ok(workspace) => workspace,
-        Err(WorkspaceLoadError::UnexpectedFormat) => return Err(format!("Could not parse the format of workspace '{name}'")),
+        Err(WorkspaceLoadError::UnexpectedFormat) => {
+            return Err(format!("Could not parse the format of workspace '{name}'"))
+        }
         Err(_) => return Err(format!("Workspace '{name}' does not exist")),
     };
 
     // Create a new text, seeding it with the name of the workspace
     let mut text = String::from(name);
 
-    // Add the workspace description to the 
+    // Add the workspace description to the
     if !workspace.desc.is_empty() {
         let desc = workspace.desc;
         text.push_str(&format!(" - {desc}"));
@@ -250,8 +258,9 @@ mod test {
         #[test]
         fn success() {
             let filepath = PathBuf::from("tests/assets/workspaces/testws.json");
-            let workspace: Workspace = Workspace::from_filepath(&filepath).expect("Could not get workspace from filepath");
-            
+            let workspace: Workspace =
+                Workspace::from_filepath(&filepath).expect("Could not get workspace from filepath");
+
             let write_directory = PathBuf::from("/circpush/tests/assets/sandbox/");
             let base_directory = PathBuf::from("/circpush");
             let monitor = FileMonitor::new("test*", &write_directory, &base_directory);
@@ -264,17 +273,22 @@ mod test {
         #[test]
         fn bad_file_read_error() {
             let filepath = PathBuf::from("/does/not/exist");
-            let error = Workspace::from_filepath(&filepath).expect_err("Successfully loaded workspace from filepath");
+            let error = Workspace::from_filepath(&filepath)
+                .expect_err("Successfully loaded workspace from filepath");
             assert_eq!(error, WorkspaceLoadError::BadFileRead);
         }
 
         #[test]
         fn unexpected_format_error() {
-            let mut temp_file = tempfile::NamedTempFile::new().expect("Could not get temporary file");
-            temp_file.write(b"junkdata").expect("Could not write to temporary file");
+            let mut temp_file =
+                tempfile::NamedTempFile::new().expect("Could not get temporary file");
+            temp_file
+                .write(b"junkdata")
+                .expect("Could not write to temporary file");
 
             let filepath = temp_file.path();
-            let error = Workspace::from_filepath(filepath).expect_err("Successfully loaded workspace from filepath");
+            let error = Workspace::from_filepath(filepath)
+                .expect_err("Successfully loaded workspace from filepath");
             assert_eq!(error, WorkspaceLoadError::UnexpectedFormat);
         }
     }
@@ -287,17 +301,20 @@ mod test {
         #[serial_test::serial]
         fn success() {
             let preexisted = crate::test_support::prepare_fresh_state();
-            
+
             let filename = "testws";
 
             let mut workspace_filepath = get_workspace_dir().join(filename);
             workspace_filepath.set_extension("json");
 
             let test_filepath = PathBuf::from("tests/assets/workspaces/testws.json");
-            fs::File::create_new(&workspace_filepath).expect("Could not create new mock workspace file");
-            fs::copy(&test_filepath, &workspace_filepath).expect("Could not copy the mock workspace file");
+            fs::File::create_new(&workspace_filepath)
+                .expect("Could not create new mock workspace file");
+            fs::copy(&test_filepath, &workspace_filepath)
+                .expect("Could not copy the mock workspace file");
 
-            let _workspace: Workspace = Workspace::from_name(&filename).expect("Could not retrieve the workspace");
+            let _workspace: Workspace =
+                Workspace::from_name(&filename).expect("Could not retrieve the workspace");
 
             crate::test_support::restore_previous_state(preexisted);
         }
@@ -306,10 +323,11 @@ mod test {
         #[serial_test::serial]
         fn error() {
             let preexisted = crate::test_support::prepare_fresh_state();
-            
+
             let filename = "doesnotexist";
 
-            let error = Workspace::from_name(&filename).expect_err("Successfully retrieved the workspace");
+            let error =
+                Workspace::from_name(&filename).expect_err("Successfully retrieved the workspace");
             assert_eq!(error, WorkspaceLoadError::DoesNotExist);
 
             crate::test_support::restore_previous_state(preexisted);
@@ -323,16 +341,21 @@ mod test {
         #[test]
         fn success() {
             let load_filepath = PathBuf::from("tests/assets/workspaces/testws.json");
-            let workspace: Workspace = Workspace::from_filepath(&load_filepath).expect("Could not get workspace from filepath");
+            let workspace: Workspace = Workspace::from_filepath(&load_filepath)
+                .expect("Could not get workspace from filepath");
 
             let tempdir = TempDir::new().expect("Could not get temporary directory");
 
             let save_filepath = tempdir.path().join("testsave");
-            workspace.save_as_filepath(&save_filepath).expect("Could not save the workspace");
+            workspace
+                .save_as_filepath(&save_filepath)
+                .expect("Could not save the workspace");
 
-            let loaded = fs::read_to_string(&load_filepath).expect("Could not load contents of test workspace");
-            let saved = fs::read_to_string(&save_filepath).expect("Could not load contents of saved workspace");
-        
+            let loaded = fs::read_to_string(&load_filepath)
+                .expect("Could not load contents of test workspace");
+            let saved = fs::read_to_string(&save_filepath)
+                .expect("Could not load contents of saved workspace");
+
             assert_eq!(saved.trim(), loaded.trim());
         }
 
@@ -341,8 +364,10 @@ mod test {
             let workspace: Workspace = Workspace::new("desc", &[]);
 
             let filepath = PathBuf::from("/does/not/exist");
-            let error = workspace.save_as_filepath(&filepath).expect_err("Successfully saved the workspace");
-        
+            let error = workspace
+                .save_as_filepath(&filepath)
+                .expect_err("Successfully saved the workspace");
+
             assert_eq!(error, WorkspaceSaveError::BadFileSave);
         }
     }
@@ -359,19 +384,24 @@ mod test {
             let filename = "testws";
 
             let load_filepath = PathBuf::from("tests/assets/workspaces/testws.json");
-            let workspace: Workspace = Workspace::from_filepath(&load_filepath).expect("Could not get workspace from filepath");
+            let workspace: Workspace = Workspace::from_filepath(&load_filepath)
+                .expect("Could not get workspace from filepath");
 
             let mut save_filepath = get_workspace_dir().join("testws");
             save_filepath.set_extension("json");
 
-            workspace.save_as_name(&filename, false).expect("Could not save workspace");
+            workspace
+                .save_as_name(&filename, false)
+                .expect("Could not save workspace");
 
-            let loaded = fs::read_to_string(&load_filepath).expect("Could not load contents of test workspace");
-            let saved = fs::read_to_string(&save_filepath).expect("Could not load contents of saved workspace");
-        
+            let loaded = fs::read_to_string(&load_filepath)
+                .expect("Could not load contents of test workspace");
+            let saved = fs::read_to_string(&save_filepath)
+                .expect("Could not load contents of saved workspace");
+
             crate::test_support::restore_previous_state(preexisted);
 
-            assert_eq!(saved.trim(), loaded.trim());  
+            assert_eq!(saved.trim(), loaded.trim());
         }
 
         #[test]
@@ -382,7 +412,8 @@ mod test {
             let filename = "testws";
 
             let load_filepath = PathBuf::from("tests/assets/workspaces/testws.json");
-            let workspace: Workspace = Workspace::from_filepath(&load_filepath).expect("Could not get workspace from filepath");
+            let workspace: Workspace = Workspace::from_filepath(&load_filepath)
+                .expect("Could not get workspace from filepath");
 
             let mut save_filepath = get_workspace_dir().join("testws");
             save_filepath.set_extension("json");
@@ -390,14 +421,18 @@ mod test {
             fs::File::create_new(&save_filepath).expect("Could not create new file");
             fs::copy(&load_filepath, &save_filepath).expect("Could not copy file contents");
 
-            workspace.save_as_name(&filename, true).expect("Could not save workspace");
+            workspace
+                .save_as_name(&filename, true)
+                .expect("Could not save workspace");
 
-            let loaded = fs::read_to_string(&load_filepath).expect("Could not load contents of test workspace");
-            let saved = fs::read_to_string(&save_filepath).expect("Could not load contents of saved workspace");
-        
+            let loaded = fs::read_to_string(&load_filepath)
+                .expect("Could not load contents of test workspace");
+            let saved = fs::read_to_string(&save_filepath)
+                .expect("Could not load contents of saved workspace");
+
             crate::test_support::restore_previous_state(preexisted);
 
-            assert_eq!(saved.trim(), loaded.trim());  
+            assert_eq!(saved.trim(), loaded.trim());
         }
 
         #[test]
@@ -408,7 +443,8 @@ mod test {
             let filename = "testws";
 
             let load_filepath = PathBuf::from("tests/assets/workspaces/testws.json");
-            let workspace: Workspace = Workspace::from_filepath(&load_filepath).expect("Could not get workspace from filepath");
+            let workspace: Workspace = Workspace::from_filepath(&load_filepath)
+                .expect("Could not get workspace from filepath");
 
             let mut save_filepath = get_workspace_dir().join("testws");
             save_filepath.set_extension("json");
@@ -416,7 +452,9 @@ mod test {
             fs::File::create_new(&save_filepath).expect("Could not create new file");
             fs::copy(&load_filepath, &save_filepath).expect("Could not copy file contents");
 
-            let error = workspace.save_as_name(&filename, false).expect_err("Successfully saved existing workspace");
+            let error = workspace
+                .save_as_name(&filename, false)
+                .expect_err("Successfully saved existing workspace");
 
             crate::test_support::restore_previous_state(preexisted);
 
@@ -466,7 +504,7 @@ mod test {
     }
 
     mod rename_workspace {
-        
+
         use super::*;
 
         #[test]
@@ -488,13 +526,16 @@ mod test {
             let mut new_filepath = get_workspace_dir().join(&new_name);
             new_filepath.set_extension("json");
 
-            let orig_contents = fs::read_to_string(&orig_filepath).expect("Could not read file contents");
+            let orig_contents =
+                fs::read_to_string(&orig_filepath).expect("Could not read file contents");
 
             let expected = format!("Renamed workspace '{orig_name}' to '{new_name}'");
 
-            let response = rename_workspace(&orig_name, &new_name).expect("Could not rename workspace");
+            let response =
+                rename_workspace(&orig_name, &new_name).expect("Could not rename workspace");
 
-            let new_contents = fs::read_to_string(&new_filepath).expect("Could not read file contents");
+            let new_contents =
+                fs::read_to_string(&new_filepath).expect("Could not read file contents");
 
             crate::test_support::restore_previous_state(preexisted);
 
@@ -511,7 +552,8 @@ mod test {
 
             let expected = format!("Workspace '{name}' does not exist");
 
-            let response = rename_workspace(&name, "newname").expect_err("Successfully renamed non-existent workspace");
+            let response = rename_workspace(&name, "newname")
+                .expect_err("Successfully renamed non-existent workspace");
 
             crate::test_support::restore_previous_state(preexisted);
 
@@ -552,8 +594,9 @@ mod test {
             let name = "doesnotexist";
 
             let expected = format!("Workspace '{name}' does not exist");
-            let response = delete_workspace(name).expect_err("Successfully deleted non-existent workspace");
-            
+            let response =
+                delete_workspace(name).expect_err("Successfully deleted non-existent workspace");
+
             assert_eq!(expected, response);
         }
     }
@@ -579,13 +622,20 @@ mod test {
             let write_filepath = PathBuf::from("/circpush/tests/assets/sandbox/");
             let path_components = [(base_filepath, write_filepath)];
 
-            let expected = crate::test_support::generate_expected_parts(&path_components, 0, Some(&format!("{name} - A test workspace")));
+            let expected = crate::test_support::generate_expected_parts(
+                &path_components,
+                0,
+                Some(&format!("{name} - A test workspace")),
+            );
 
             let response = view_workspace(name, true).expect("Could not view workspace");
 
             crate::test_support::restore_previous_state(preexisted);
 
-            assert_eq!(crate::test_support::parse_contents(&response, true), expected);
+            assert_eq!(
+                crate::test_support::parse_contents(&response, true),
+                expected
+            );
         }
 
         #[test]
@@ -605,13 +655,17 @@ mod test {
             let write_filepath = PathBuf::from("/circpush/tests/assets/sandbox/");
             let path_components = [(base_filepath, write_filepath)];
 
-            let expected = crate::test_support::generate_expected_parts(&path_components, 0, Some(name));
+            let expected =
+                crate::test_support::generate_expected_parts(&path_components, 0, Some(name));
 
             let response = view_workspace(name, true).expect("Could not view workspace");
 
             crate::test_support::restore_previous_state(preexisted);
 
-            assert_eq!(crate::test_support::parse_contents(&response, true), expected);
+            assert_eq!(
+                crate::test_support::parse_contents(&response, true),
+                expected
+            );
         }
 
         #[test]
@@ -622,7 +676,8 @@ mod test {
             let name = "doesnotexist";
 
             let expected = format!("Workspace '{name}' does not exist");
-            let response = view_workspace(name, true).expect_err("Successfully viewed non-existent workspace");
+            let response =
+                view_workspace(name, true).expect_err("Successfully viewed non-existent workspace");
 
             crate::test_support::restore_previous_state(preexisted);
 
@@ -640,7 +695,8 @@ mod test {
             fs::File::create_new(&filepath).expect("Could not create new file");
 
             let expected = format!("Could not parse the format of workspace '{name}'");
-            let response = view_workspace(name, true).expect_err("Successfully viewed incorrectly formatted workspace");
+            let response = view_workspace(name, true)
+                .expect_err("Successfully viewed incorrectly formatted workspace");
 
             crate::test_support::restore_previous_state(preexisted);
 
