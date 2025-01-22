@@ -31,6 +31,7 @@ mod test {
     use super::*;
 
     #[test]
+    /// Tests that the application directory is approrpiate
     fn get_app_dir() {
         let app_dir = super::get_app_dir();
         assert!(app_dir.ends_with(env!("CARGO_PKG_NAME")))
@@ -38,15 +39,22 @@ mod test {
 
     #[test]
     #[serial_test::serial]
+    /// Tests that ensuring the application directory works
     fn ensure_app_dir() {
-        // test_support::prepare_fresh_start() runs ensure_app_dir()
+        // Prepare a fresh state for the test
+        // This function already ensures the application directory exists
         let preexisted = crate::test_support::prepare_fresh_state();
+
+        // Get the application directory and check that it exists
         let app_dir = super::get_app_dir();
         assert!(app_dir.exists());
+
+        // Restore the previous state after the test
         crate::test_support::restore_previous_state(preexisted);
     }
 
     #[test]
+    /// Tests that the application workspace directory is approrpiate
     fn get_workspace_dir() {
         let app_dir = super::get_workspace_dir();
         let endpath = PathBuf::from(env!("CARGO_PKG_NAME")).join(WORKSPACE_DIRNAME);
@@ -55,11 +63,17 @@ mod test {
 
     #[test]
     #[serial_test::serial]
+    /// Tests that ensuring the application workspace directory works
     fn ensure_workspace_dir() {
-        // test_support::prepare_fresh_start() runs ensure_workspace_dir()
+        // Prepare a fresh state for the test
+        // This function already ensures the application workspace directory exists
         let preexisted = crate::test_support::prepare_fresh_state();
+
+        // Get the application workspace directory and check that it exists
         let app_dir = super::get_workspace_dir();
         assert!(app_dir.exists());
+
+        // Restore the previous state after the test
         crate::test_support::restore_previous_state(preexisted);
     }
 }
