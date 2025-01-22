@@ -23,13 +23,14 @@ else
 	@exit 1
 endif
 
+# TODO: This hasn't been tested on Windows
 .PHONY:
 test-run:
 	@if command -v pyenv >/dev/null; \
 	then \
 		export LD_LIBRARY_PATH=~/.pyenv/versions/3.13.0/lib; \
 	fi; \
-	cargo llvm-cov --html --features test-support
+	cargo llvm-cov --html --features test-support --ignore-filename-regex src/lib.rs
 
 .PHONY: test-clean
 test-clean:
@@ -50,19 +51,11 @@ endif
 
 .PHONY: wipe-test-artifacts
 wipe-test-artifacts:
-ifeq "$(OS)" "Windows_NT"
-	-@python scripts\rmdir_test_config.py
-else
 	-@python scripts/rmdir_test_config.py
-endif
 
 .PHONY: check-test-artifacts
 check-test-artifacts:
-ifeq "$(OS)" "Windows_NT"
-	@python scripts\check_test_artifacts.py
-else
 	@python scripts/check_test_artifacts.py
-endif
 
 .PHONY: test
 test: check-test-artifacts
