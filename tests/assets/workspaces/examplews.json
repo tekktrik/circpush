@@ -1,0 +1,12 @@
+{
+    "desc": "Another test workspace",
+    "monitors": [
+      {
+        "read_pattern": "example*",
+        "write_directory": "/circpush/tests/assets/sandbox/",
+        "base_directory": "/circpush",
+        "links": []
+      }
+    ]
+  }
+  

@@ -43,8 +43,6 @@ mod test {
 
         assert!(find_circuitpy().is_none());
 
-        let x = bootout_filepath.parent().unwrap();
-
         fs::write(&bootout_filepath, &boutout_contents).expect("Could not copy test bootout file after test");
         assert!(bootout_filepath.exists());
     }

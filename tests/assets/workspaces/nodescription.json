@@ -1,0 +1,11 @@
+{
+  "desc": "",
+  "monitors": [
+    {
+      "read_pattern": "test*",
+      "write_directory": "/circpush/tests/assets/sandbox/",
+      "base_directory": "/circpush",
+      "links": []
+    }
+  ]
+}

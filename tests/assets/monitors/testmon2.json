@@ -1,0 +1,6 @@
+{
+  "read_pattern": "test2*",
+  "write_directory": "/circpush2/tests/assets/sandbox/",
+  "base_directory": "/circpush2",
+  "links": []
+}

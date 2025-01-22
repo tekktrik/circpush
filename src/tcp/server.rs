@@ -1,7 +1,7 @@
 use crate::commands::{Request, Response, STOP_RESPONSE};
 use crate::monitor::FileMonitor;
 use serde::Deserialize;
-use std::io::{prelude::*, ErrorKind};
+use std::io::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::ops::Index;
 use std::process::{Command, Stdio};
@@ -164,6 +164,10 @@ fn handle_connection(mut stream: TcpStream, state: &mut ServerState) -> bool {
         }
         Request::ViewWorkspaceName => {
             Response::Message { msg: workspace_name.clone() }
+        },
+        Request::SetWorkspaceName { name} => {
+            *workspace_name = name.clone();
+            Response::NoData
         }
     };
 
@@ -201,7 +205,8 @@ pub fn run_server() -> String {
                 }
             }
             // No connection received before non-blocking timeout
-            Err(e) if e.kind() == ErrorKind::WouldBlock => {
+            // Err(e) if e.kind() == ErrorKind::WouldBlock => {
+            _ => {
                 let mut has_broken_monitors = false;
                 for monitor in &mut state.monitors {
                     if monitor.update_links().is_err() {
@@ -216,7 +221,7 @@ pub fn run_server() -> String {
                 }
             }
             // Any other errors
-            Err(_e) => panic!("Could not accept incoming connection"),
+            // Err(_e) => panic!("Could not accept incoming connection"),
         }
         sleep(sleep_duration); // TODO: Remove later?
     }

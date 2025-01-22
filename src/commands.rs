@@ -27,12 +27,15 @@ pub enum Request {
         number: usize,
     },
     ViewWorkspaceName,
+    SetWorkspaceName {
+        name: String,
+    },
 }
 
 /// Various types of responses from the TCP server to the client
 ///
 /// These can be serialized into JSON for communication.
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum Response {
     NoData,

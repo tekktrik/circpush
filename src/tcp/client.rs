@@ -1,6 +1,6 @@
 use crate::commands::{Request, Response, STOP_RESPONSE};
 use crate::monitor::{as_table, FileMonitor};
-use crate::workspace::{Workspace, WorkspaceLoadError, WorkspaceSaveError};
+use crate::workspace::{Workspace, WorkspaceLoadError};
 use crate::tcp::server::PORT;
 use serde::Deserialize;
 use std::io::prelude::*;
@@ -50,7 +50,6 @@ fn communicate(request: Request) -> Result<Response, String> {
 pub fn ping() -> Result<String, String> {
     match communicate(Request::Ping) {
         Ok(Response::NoData) => Ok(String::from("Ping received!")),
-        Err(error) => Err(error),
         _ => Err(String::from(
             "ERROR: Did not receive expected ping response",
         )),
@@ -61,9 +60,8 @@ pub fn ping() -> Result<String, String> {
 pub fn echo(message: String) -> Result<String, String> {
     match communicate(Request::Echo { msg: message }) {
         Ok(Response::Message { msg }) => Ok(msg),
-        Err(error) => Err(error),
         _ => Err(String::from(
-            "ERROR: Did not receive expected echo response",
+            "ERROR: Did not receive echo response",
         )),
     }
 }
@@ -74,7 +72,6 @@ pub fn stop_server() -> Result<String, String> {
         Ok(Response::Message { msg }) if msg == STOP_RESPONSE => {
             Ok(format!("Server on port {PORT} shutdown"))
         }
-        Err(error) => Err(error),
         _ => Err(String::from("ERROR: Did not receive expected response")),
     }
 }
@@ -91,7 +88,6 @@ pub fn start_monitor(
         base_directory,
     }) {
         Ok(Response::Message { msg }) => Ok(msg),
-        Err(error) => Err(error),
         _ => Err(String::from("ERROR: Could not start link")),
     }
 }
@@ -100,8 +96,8 @@ pub fn start_monitor(
 pub fn stop_monitor(number: usize) -> Result<String, String> {
     match communicate(Request::StopLink { number }) {
         Ok(Response::Message { msg }) => Ok(msg),
-        Err(error) => Err(error),
-        _ => Err(String::from("ERROR: Could not stop link")),
+        Ok(Response::ErrorMessage { msg }) => Err(msg),
+        _ => return Err(String::from("ERROR: Could not stop link")),
     }
 }
 
@@ -109,8 +105,8 @@ fn get_monitor_list(number: usize) -> Result<Vec<FileMonitor>, String> {
     // Get the response of the server communication
     let response = match communicate(Request::ViewLink { number }) {
         Ok(Response::Links { json }) => json,
-        Err(error) => return Err(error),
-        _ => return Err(String::from("ERROR: Could not retrieve link")),
+        Ok(Response::ErrorMessage { msg }) => return Err(msg),
+        _ => return Err(String::from("ERROR: Could not retrieve link(s)")),
     };
 
     // Parse the response string into a list of FileMonitors
@@ -147,28 +143,39 @@ pub fn save_workspace(name: &str, desc: &str, force: bool) -> Result<String, Str
     // Save the workspace
     match workspace.save_as_name(name, force) {
         Ok(_) => Ok(format!("Saved the current set of file monitors as workspace '{name}'")),
-        Err(WorkspaceSaveError::AlreadyExists) => Err(format!("Workspace '{name}' already exists, use --force to overwrite it")),
-        Err(WorkspaceSaveError::BadFileSave) => Err(format!("Could not save workspace '{name}'")),
+        Err(_) => Err(format!("Workspace '{name}' already exists, use --force to overwrite it")),
+        // Err(WorkspaceSaveError::BadFileSave) => Err(format!("Could not save workspace '{name}'")),
+    }
+}
+
+/// Sets the workspace name
+pub fn set_workspace_name(name: &str) -> Result<String, String> {
+    match communicate(Request::SetWorkspaceName { name: name.to_owned() }) {
+        Ok(Response::NoData) => Ok(format!("Workspace name set to '{name}'")),
+        _ => Err(String::from(
+            "ERROR: Did not receive expected response",
+        )),
     }
 }
 
 /// Load the given workspace
 pub fn load_workspace(name: &str) -> Result<String, String> {
     // Stop current file monitors
-    let _ = stop_monitor(0);
+    if stop_monitor(0).is_err() {
+        return Err(String::from("ERROR: Could not load the workspace"));
+    }
 
     let workspace = match Workspace::from_name(name) {
         Ok(workspace) => workspace,
-        Err(WorkspaceLoadError::DoesNotExist) => return Err(format!("Workspace '{name}' does not exist")),
-        Err(WorkspaceLoadError::BadFileRead) => return Err(format!("Could not load workspace '{name}'")),
+        Err(WorkspaceLoadError::UnexpectedFormat) => return Err(format!("Could not parse the format of workspace '{name}'")),
+        Err(_) => return Err(format!("Workspace '{name}' does not exist")),
     };
 
     for file_monitor in workspace.monitors {
-        if start_monitor(file_monitor.read_pattern, file_monitor.write_directory, file_monitor.base_directory).is_err() {
-            let _ = stop_monitor(0);
-            return Err(format!("Failed to start file monitors for workspace '{name}'"));
-        }
+        start_monitor(file_monitor.read_pattern, file_monitor.write_directory, file_monitor.base_directory).expect(&format!("Could not start all file monitors"));
     }
+
+    set_workspace_name(name).expect("Could not set the name for the workspace");
 
     Ok(format!("Started workspace '{name}'"))
 }
@@ -178,7 +185,6 @@ pub fn get_current_workspace() -> Result<String, String> {
     // Get the response of the server communication
     let mut name = match communicate(Request::ViewWorkspaceName) {
         Ok(Response::Message { msg }) => msg,
-        Err(error) => return Err(error),
         _ => return Err(String::from("ERROR: Could not retrieve workspace name")),
     };
 
@@ -187,4 +193,127 @@ pub fn get_current_workspace() -> Result<String, String> {
     }
 
     Ok(name)
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    #[test]
+    #[serial_test::serial]
+    /// Tests that the ping function returns an error if the server is not running
+    fn ping_error() {
+        // Get the expected error message
+        let expected_err = "ERROR: Did not receive expected ping response";
+
+        // Get the response of the ping command
+        let response = ping();
+        
+        // Check the error response
+        let err_msg = response.unwrap_err();
+        assert_eq!(&err_msg, expected_err);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    /// Tests that the echp function returns an error if the server is not running
+    fn echo_error() {
+        let expected_err = "ERROR: Did not receive echo response";
+        
+        let response = echo(String::from("testmsg"));
+        
+        let err_msg = response.unwrap_err();
+        assert_eq!(&err_msg, expected_err);
+    }
+
+
+    #[test]
+    #[serial_test::serial]
+    fn stop_server_error() {
+        let expected_err = "ERROR: Did not receive expected response";
+        
+        let response = stop_server();
+        
+        let err_msg = response.unwrap_err();
+        assert_eq!(&err_msg, expected_err);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn start_monitor_error() {
+        let resp_msg = "ERROR: Could not start link";
+        
+        let response = start_monitor(
+            String::from("test"), PathBuf::from("test"), PathBuf::from("test"));
+        
+        let msg = response.unwrap_err();
+        assert_eq!(&msg, resp_msg);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn stop_monitor_error() {
+        let resp_msg = "ERROR: Could not stop link";
+
+        let response = stop_monitor(0);
+
+        let msg = response.unwrap_err();
+        assert_eq!(&msg, resp_msg);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn get_monitor_list_error() {
+        let resp_msg = "ERROR: Could not retrieve link(s)";
+
+        let response = get_monitor_list(1);
+
+        let msg = response.unwrap_err();
+        assert_eq!(&msg, resp_msg);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn save_workspace_error() {
+        let resp_msg = "ERROR: Could not retrieve link(s)";
+
+        let response = save_workspace("test", "test", false);
+
+        let msg = response.unwrap_err();
+        assert_eq!(&msg, resp_msg);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn set_workspace_name_error() {
+        let resp_msg = "ERROR: Did not receive expected response";
+
+        let response = set_workspace_name("test");
+
+        let msg = response.unwrap_err();
+        assert_eq!(&msg, resp_msg);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn load_workspace_error() {
+        let resp_msg = "ERROR: Could not load the workspace";
+
+        let response = load_workspace("doesnotexist");
+
+        let msg = response.unwrap_err();
+        assert_eq!(&msg, resp_msg);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn get_current_workspace_error() {
+        let resp_msg = "ERROR: Could not retrieve workspace name";
+
+        let response = get_current_workspace();
+
+        let msg = response.unwrap_err();
+        assert_eq!(&msg, resp_msg);
+    }
 }

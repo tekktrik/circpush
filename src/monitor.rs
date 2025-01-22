@@ -187,6 +187,13 @@ impl FileMonitor {
     pub fn write_directory_exists(&self) -> bool {
         self.write_directory.exists()
     }
+
+    /// Get a linkless clone of the current file monitor
+    pub fn clone_linkless(&self) -> Self {
+        let mut linkless = self.clone();
+        linkless.links.clear();
+        linkless
+    }
 }
 
 impl PartialEq for FileMonitor {
@@ -619,6 +626,17 @@ mod tests {
             assert!(!monitor.write_directory_exists());
         }
 
+        #[test]
+        fn clone_linkless() {
+            let (mut monitor, _readdir, _writedir) = get_monitor();
+
+            let linkless = monitor.clone_linkless();
+
+            monitor.links.clear();
+
+            assert_eq!(linkless, monitor);
+        }
+
         mod partial_eq {
 
             use super::*;
@@ -752,6 +770,5 @@ mod tests {
                 assert_ne!(hasher0.finish(), hasher1.finish());
             }
         }
-
     }
 }
