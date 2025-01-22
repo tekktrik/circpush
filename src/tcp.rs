@@ -47,7 +47,7 @@ mod test {
     #[serial_test::serial]
     fn ping_success() {
         let ping_func = || client::ping();
-        let response = with_threaded_server(ping_func, 500);
+        let response = with_threaded_server(ping_func, 100);
 
         let msg = response.unwrap();
         assert_eq!(&msg, "Ping received!");
@@ -59,7 +59,7 @@ mod test {
         let echo_msg = "This is a test message";
 
         let ping_func = || client::echo(echo_msg.to_string());
-        let response = with_threaded_server(ping_func, 500);
+        let response = with_threaded_server(ping_func, 100);
 
         let msg = response.unwrap();
         assert_eq!(&msg, echo_msg);
@@ -88,7 +88,7 @@ mod test {
     fn start_monitor_success() {
         let (start_monitor_func, _tempdir) = get_start_monitor_closure();
         let resp_msg = "Link 1 started!";
-        let response = with_threaded_server(start_monitor_func, 500);
+        let response = with_threaded_server(start_monitor_func, 100);
 
         let msg = response.unwrap();
         assert_eq!(&msg, resp_msg);
@@ -109,7 +109,7 @@ mod test {
                 start_monitor_func().expect("Could not start file monitor");
                 client::stop_monitor(1)
             };
-            let response = with_threaded_server(stop_monitor_func, 500);
+            let response = with_threaded_server(stop_monitor_func, 100);
 
             let msg = response.unwrap();
             assert_eq!(&msg, resp_msg);
@@ -126,7 +126,7 @@ mod test {
                 start_monitor_func().expect("Could not start file monitor");
                 client::stop_monitor(0)
             };
-            let response = with_threaded_server(stop_monitor_func, 500);
+            let response = with_threaded_server(stop_monitor_func, 100);
 
             let msg = response.unwrap();
             assert_eq!(&msg, resp_msg);
@@ -139,7 +139,7 @@ mod test {
 
             let stop_monitor_func = || client::stop_monitor(1);
 
-            let response = with_threaded_server(stop_monitor_func, 500);
+            let response = with_threaded_server(stop_monitor_func, 100);
 
             let msg = response.unwrap_err();
             assert_eq!(&msg, err_msg);
@@ -156,7 +156,7 @@ mod test {
                 start_monitor_func().expect("Could not start file monitor");
                 client::stop_monitor(linknum)
             };
-            let response = with_threaded_server(stop_monitor_func, 500);
+            let response = with_threaded_server(stop_monitor_func, 100);
 
             let msg = response.unwrap_err();
             assert_eq!(&msg, &err_msg);
@@ -204,7 +204,7 @@ mod test {
                 start_monitor_func2().expect("Could not start file monitor 1");
                 client::view_monitor(link_num, !relative)
             };
-            let response = with_threaded_server(view_monitor_func, 500);
+            let response = with_threaded_server(view_monitor_func, 100);
 
             let msg = response.unwrap();
             assert_eq!(
@@ -241,7 +241,7 @@ mod test {
         #[serial_test::serial]
         fn none_active() {
             let view_monitor_func = || client::view_monitor(2, true);
-            let response = with_threaded_server(view_monitor_func, 500);
+            let response = with_threaded_server(view_monitor_func, 100);
 
             let expected_msg = "No links are active";
 
@@ -260,7 +260,7 @@ mod test {
                 start_monitor_func().expect("Could not start file monitor 1");
                 client::view_monitor(link_num, true)
             };
-            let response = with_threaded_server(view_monitor_func, 500);
+            let response = with_threaded_server(view_monitor_func, 100);
 
             let expected_msg = format!("Link {link_num} does not exist!");
 
@@ -289,7 +289,7 @@ mod test {
                 start_monitor_func().expect("Could not start file monitor 1");
                 client::save_workspace(&name, &description, false)
             };
-            let response = with_threaded_server(save_monitor_func, 500);
+            let response = with_threaded_server(save_monitor_func, 100);
 
             let expected_msg =
                 format!("Saved the current set of file monitors as workspace '{name}'");
@@ -305,7 +305,7 @@ mod test {
             let description = "A test description";
 
             let view_monitor_func = || client::save_workspace(&name, &description, false);
-            let response = with_threaded_server(view_monitor_func, 500);
+            let response = with_threaded_server(view_monitor_func, 100);
 
             let expected_msg = "No file monitors are active to save";
 
@@ -327,7 +327,7 @@ mod test {
                 fs::File::create(&filepath).expect("Could not create new file");
                 client::save_workspace(&name, &description, false)
             };
-            let response = with_threaded_server(save_monitor_func, 500);
+            let response = with_threaded_server(save_monitor_func, 100);
 
             let expected_msg =
                 format!("Workspace '{name}' already exists, use --force to overwrite it");
@@ -343,7 +343,7 @@ mod test {
         let name = "testworkspace";
 
         let save_monitor_func = || client::set_workspace_name(name);
-        let response = with_threaded_server(save_monitor_func, 500);
+        let response = with_threaded_server(save_monitor_func, 100);
 
         let expected_msg = format!("Workspace name set to '{name}'");
 
@@ -374,7 +374,7 @@ mod test {
 
                 client::load_workspace(name)
             };
-            let response = with_threaded_server(save_monitor_func, 500);
+            let response = with_threaded_server(save_monitor_func, 100);
 
             let expected_msg = format!("Started workspace '{name}'");
 
@@ -392,7 +392,7 @@ mod test {
                 fs::File::create_new(&filepath).expect("Could not create new file");
                 client::load_workspace(name)
             };
-            let response = with_threaded_server(save_monitor_func, 500);
+            let response = with_threaded_server(save_monitor_func, 100);
 
             let expected_msg = format!("Could not parse the format of workspace '{name}'");
 
@@ -406,7 +406,7 @@ mod test {
             let name = "doesnotexist";
 
             let save_monitor_func = || client::load_workspace(name);
-            let response = with_threaded_server(save_monitor_func, 500);
+            let response = with_threaded_server(save_monitor_func, 100);
 
             let expected_msg = format!("Workspace '{name}' does not exist");
 
@@ -425,7 +425,7 @@ mod test {
     #[serial_test::serial]
     fn view_workspace() {
         let view_monitor_func = || client::get_current_workspace();
-        let response = with_threaded_server(view_monitor_func, 500);
+        let response = with_threaded_server(view_monitor_func, 100);
 
         let expected_msg = "No workspace is currently active";
 
@@ -452,13 +452,13 @@ mod test {
                 fs::File::create_new(tempdir.path().join("test*"))
                     .expect("Could not create new file");
                 start_monitor_func().expect("Could not start file monitor 1");
-                thread::sleep(Duration::from_millis(500));
+                thread::sleep(Duration::from_millis(100));
                 fs::remove_dir_all(tempdir.path()).expect("Could not remove temporary directory");
-                thread::sleep(Duration::from_millis(500));
+                thread::sleep(Duration::from_millis(100));
                 client::view_monitor(0, true)
             };
 
-            let response = with_threaded_server(ping_func, 500);
+            let response = with_threaded_server(ping_func, 100);
 
             let msg = response.unwrap();
             assert_eq!(
