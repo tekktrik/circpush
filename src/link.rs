@@ -182,36 +182,46 @@ mod tests {
     use std::path::absolute;
     use tempfile::{tempdir, NamedTempFile, TempDir};
 
+    /// Creates a new file link for tests, with both a source and destination file created
     fn create_new_filelink() -> (FileLink, NamedTempFile, NamedTempFile) {
+        // Get the absolute filepath to a temporary source file
         let srcfile = NamedTempFile::new().expect("Could not create temporary source file");
         let source = absolute(srcfile.path()).expect("Could not get absolute path of source");
 
+        // Get the absolute filepath to a temporary destination file
         let destfile = NamedTempFile::new().expect("Could not open a temporary destination file");
         let destination =
             absolute(destfile.path()).expect("Could not get absolute path of destination file");
 
+        // Create the file link
         let link = FileLink {
             source,
             destination,
         };
 
+        // Return the file link and filepaths
         (link, srcfile, destfile)
     }
 
+    /// Creates a new file link for tests, with a source file and destination directory created
     fn create_new_unwritten_filelink() -> (FileLink, NamedTempFile, TempDir) {
+        // Get the absolute filepath to a temporary source file
         let srcfile = NamedTempFile::new().expect("Could not create temporary source file");
         let source = absolute(srcfile.path()).expect("Could not get absolute path of source");
 
+        // Get the absolute filepath to a temporary destination directory
         let destdir = tempdir().expect("Could not open a temporary destination file");
         let destination = absolute(destdir.path())
             .expect("Could not get absolute path of destination file")
             .join("testfile");
 
+        // Create the file link
         let link = FileLink {
             source,
             destination,
         };
 
+        // Return the file link and filepaths
         (link, srcfile, destdir)
     }
 
@@ -225,101 +235,123 @@ mod tests {
 
             use std::env::current_dir;
 
+            /// Tests FileLink::new(), where:
+            ///
+            /// - Source file that does exist (absolute path)
+            /// - Destination file (absolute path)
             #[test]
             fn success() {
-                // Test:
-                // Source file that does exist (absolute path)
-                // Destination file (absolute path)
+                // Get the absolute filepath to a temporary source file
                 let srcfile = NamedTempFile::new().expect("Could not create temporary source file");
                 let source =
                     absolute(srcfile.path()).expect("Could not get absolute path of source");
 
+                // Get the absolute filepath to a temporary destination file
                 let destfile =
                     NamedTempFile::new().expect("Could not open a temporary destination file");
                 let destination = absolute(destfile.path())
                     .expect("Could not get absolute path of destination file");
 
+                // Test creating the file link
                 let _: FileLink =
                     FileLink::new(&source, &destination).expect("Could not create a valid link");
             }
 
+            /// Tests FileLink::new(), where:
+            ///
+            /// - Source file that does not exist (absolute path)
+            /// - Destination file (absolute path)
             #[test]
             fn source_does_not_exist() {
-                // Test:
-                // Source file that does not exist (absolute path)
-                // Destination file (absolute path)
+                // Get the absolute filepath to a non-existent file
                 let source =
                     absolute("does/not/exist").expect("Could not get absolute path of source");
 
+                // Get the absolute filepath to a temporary destination file
                 let destfile =
                     NamedTempFile::new().expect("Could not open a temporary destination file");
                 let destination = absolute(destfile.path())
                     .expect("Could not get absolute path of destination file");
 
+                // Check that an error is returned when creating a file link
                 let error = FileLink::new(&source, &destination).expect_err(
                     "Successfully created the file link when it should have been prevented",
                 );
                 assert_eq!(error, FileLinkCreationError::InvalidSource);
             }
 
+            /// Tests FileLink::new(), where:
+            ///
+            /// - Source directory that does exist (absolute path)
+            /// - Destination file (absolute path)
             #[test]
             fn source_directory() {
-                // Test:
-                // Source directory that does exist (absolute path)
-                // Destination file (absolute path)
+                // Get the absolute filepath to a temporary directory
                 let srcfile = tempdir().expect("Could not open a temporary source directory");
                 let source =
                     absolute(srcfile.path()).expect("Could not get absolute path of source");
 
+                // Get the absolute filepath to a temporary destination file
                 let destfile =
                     NamedTempFile::new().expect("Could not open a temporary destination file");
                 let destination = absolute(destfile.path())
                     .expect("Could not get absolute path of destination file");
 
+                // Check that an error is returned when creating a file link
                 let error = FileLink::new(&source, &destination).expect_err(
                     "Successfully created the file link when it should have been prevented",
                 );
                 assert_eq!(error, FileLinkCreationError::InvalidSource);
             }
 
+            /// Tests FileLink::new(), where:
+            ///
+            /// - Source file that does exist (relative path)
+            /// - Destination file (absolute path)
             #[test]
             fn source_relative() {
-                // Test:
-                // Source file that does exist (relative path)
-                // Destination file (absolute path)
+                // Get the filepath to the current directory
                 let current_dir = current_dir().expect("Could not get current directory");
 
+                // Get the relative filepath to a temporary source file
                 let srcfile = NamedTempFile::new().expect("Could not create temporary file");
                 let source = pathdiff::diff_paths(&srcfile.path(), &current_dir)
                     .expect("Could not get relative path for source file");
 
+                // Get the absolute filepath to a temporary destination file
                 let destfile =
                     NamedTempFile::new().expect("Could not open a temporary destination file");
                 let destination = absolute(destfile.path())
                     .expect("Could not get absolute path of destination file");
 
+                // Check that an error is returned when creating a file link
                 let error = FileLink::new(&source, &destination).expect_err(
                     "Successfully created the file link when it should have been prevented",
                 );
                 assert_eq!(error, FileLinkCreationError::InvalidSource);
             }
 
+            /// Tests FileLink::new(), where
+            ///
+            /// = Source file that does exist (absolute path)
+            /// - Destination file (relative path)
             #[test]
             fn destination_relative() {
-                // Test:
-                // Source file that does exist (absolute path)
-                // Destination file (relative path)
+                // Get the filepath to the current directory
                 let current_dir = current_dir().expect("Could not get current directory");
 
+                // Get the absolute filepath to a temporary source file
                 let srcfile = NamedTempFile::new().expect("Could not create temporary file");
                 let source =
                     absolute(srcfile.path()).expect("Could not get absolute path of source");
 
+                // Get the relative filepath to a temporary destination file
                 let destfile =
                     NamedTempFile::new().expect("Could not open a temporary destination file");
                 let destination = pathdiff::diff_paths(destfile.path(), &current_dir)
                     .expect("Could not get relative path for destination file");
 
+                // Check that an error is returned when creating a file link
                 let error = FileLink::new(&source, &destination).expect_err(
                     "Successfully created the file link when it should have been prevented",
                 );
@@ -331,44 +363,66 @@ mod tests {
 
             use super::*;
 
+            /// Tests FileLink::ensure_writepath(), where it:
+            ///
+            /// - Successfully creates destination file
             #[test]
             fn destination_does_not_exist() {
-                // Test
-                // Successfully creates destination file
+                // Generate a file link
                 let (mut filelink, _src, _dst) = create_new_unwritten_filelink();
+
+                // Set the destination to a non-existent file and check it doesn't already exist
                 filelink.destination = filelink.destination.join("inner").join("newfile");
                 assert!(!filelink.destination.parent().unwrap().exists());
+
+                // Ensure the write path
                 filelink
                     .ensure_writepath()
                     .expect("Could not ensure file link destination");
+
+                // Check the write path now exists
                 assert!(filelink.destination.parent().unwrap().exists());
             }
 
+            /// Tests FileLink::ensure_writepath(), where it:
+            ///
+            /// - Does nothing as the file already exists
             #[test]
             fn destination_exists() {
-                // Test
-                // Does nothing as the file already exists
+                // Generate a file link
                 let (filelink, _src, _dst) = create_new_filelink();
+
+                // Check the destination already exists
                 assert!(filelink.destination.exists());
+
+                // Ensure the write path
                 filelink
                     .ensure_writepath()
                     .expect("Could not ensure file link destination");
+
+                // Check the write path still exists
                 assert!(filelink.destination.exists());
             }
 
+            /// Tests FileLink::ensure_writepath(), where:
+            ///
+            /// - Fail to ensure write path because recursively creatings directories fails
             #[test]
             fn directory_creation_failure() {
-                // Test
-                // Fail to ensure write path because recursively creatings directories fails
+                // Generate a file link
                 let (mut filelink, _src, _dst) = create_new_filelink();
+
+                // Set the source to a file whose parent is an existing file
                 filelink.destination = filelink.source.join("testfile");
                 assert!(filelink.destination.parent().unwrap().is_file());
 
+                // Check ensuring the write ptah causes an error
                 let error = filelink
                     .ensure_writepath()
                     .expect_err("Successfully ensured an impossible destination");
                 assert_eq!(error, FileLinkCreationError::DestinationSetup);
 
+                // Check the state of the destination file
                 assert!(filelink.destination.parent().unwrap().is_file());
                 assert!(!filelink.destination.parent().unwrap().is_dir());
             }
@@ -378,11 +432,15 @@ mod tests {
 
             use super::*;
 
+            /// Tests FileLink::is_outdated(), where:
+            ///
+            /// - Destination file is outdated
             #[test]
             fn source_before_destination() {
-                // Test
-                // Destination file is outdated
+                // Generate a file link
                 let (link, _src, _dst) = create_new_filelink();
+
+                // Set the destination modification time to 30 seconds before the source
                 let orig_mtime = get_file_mtime(&link.source);
                 let new_mtime = FileTime::from_unix_time(
                     orig_mtime.unix_seconds() - 30,
@@ -390,25 +448,37 @@ mod tests {
                 );
                 set_file_mtime(&link.destination, new_mtime)
                     .expect("Could not set modification time");
+
+                // Check the file link is identified as outdated
                 assert!(link.is_outdated());
             }
 
+            /// Tests FileLink::is_outdated(), where:
+            ///
+            /// - Destination file is not outdated (it is equal to source)
             #[test]
             fn source_equals_destination() {
-                // Test
-                // Destination file is not outdated (it is equal to source)
+                // Generate a file link
                 let (link, _src, _dst) = create_new_filelink();
+
+                // Set the destination modification time to the same time as the source
                 let orig_mtime = get_file_mtime(&link.source);
                 set_file_mtime(&link.destination, orig_mtime)
                     .expect("Could not set modification time");
+
+                // Check the file link is identified as not outdated
                 assert!(!link.is_outdated());
             }
 
+            /// Tests FileLink::is_outdated(), where:
+            ///
+            /// - Destination file is not outdated (it is after source)
             #[test]
             fn source_after_destination() {
-                // Test
-                // Destination file is not outdated (it is after source)
+                // Generate a file link
                 let (link, _src, _dst) = create_new_filelink();
+
+                // Set the destination modification time to 30 seconds after the source
                 let orig_mtime = get_file_mtime(&link.source);
                 let new_mtime = FileTime::from_unix_time(
                     orig_mtime.unix_seconds() + 30,
@@ -416,13 +486,16 @@ mod tests {
                 );
                 set_file_mtime(&link.destination, new_mtime)
                     .expect("Could not set modification time");
+
+                // Check the file link is identified as not outdated
                 assert!(!link.is_outdated());
             }
 
+            /// Tests FileLink::is_outdated(), where:
+            ///
+            /// - Destination file does not exist
             #[test]
             fn desination_does_not_exist() {
-                // Test
-                // Destination file does not exist
                 let (link, _src, _dst) = create_new_unwritten_filelink();
                 assert!((link.is_outdated()))
             }
@@ -434,32 +507,41 @@ mod tests {
 
             use super::*;
 
+            /// Tests the successful use case of FileLink::update()
             #[test]
             fn success() {
+                // Generate a file link
                 let (mut link, mut src, _dst) = create_new_filelink();
 
+                // Write to the source file
                 let new_contents = b"test";
                 src.write(new_contents)
                     .expect("Could not write to source file");
 
+                // Update the file link
                 let total: u64 = link.update().expect("Could not update file link");
 
+                // Get the contents of the source and destination files
                 let src_contents = fs::read(&link.source).expect("Could not read source");
                 let dst_contents = fs::read(&link.destination).expect("Could not read destination");
 
+                // Check the contents match
                 assert_eq!(src_contents, dst_contents);
+
+                // Check the reported number of bytes copied match
                 assert_eq!(total, new_contents.len() as u64);
             }
 
+            /// Tests the use case where FileLink::update() would fail
             #[test]
             fn copy_failed() {
-                let (mut link, mut src, _dst) = create_new_filelink();
+                // Generate a file link
+                let (mut link, mut _src, _dst) = create_new_filelink();
+
+                // Set the source to a non-existent file
                 link.source = link.source.join("does/not/exist");
 
-                let new_contents = b"test";
-                src.write(new_contents)
-                    .expect("Could not write to source file");
-
+                // Check that update the file link returns an error
                 let error = link
                     .update()
                     .expect_err("Updated using non-existent source file");
@@ -467,22 +549,25 @@ mod tests {
             }
         }
 
-        mod delete {
+        /// Tests FileLink::delete()
+        #[test]
+        fn delete() {
+            // Generate a file link
+            let (link, _src, _dst) = create_new_unwritten_filelink();
 
-            use super::*;
+            // Check that the file link destination does not yet exist
+            assert!(!link.destination.exists());
 
-            #[test]
-            fn success() {
-                let (link, _src, _dst) = create_new_unwritten_filelink();
-                assert!(!link.destination.exists());
+            // Create a file at the file link destination
+            fs::File::create(&link.destination).expect("Could not create new destination file");
+            assert!(link.destination.exists());
 
-                fs::File::create(&link.destination).expect("Could not create new destination file");
-                assert!(link.destination.exists());
+            // Perform a file link deletion
+            link.delete()
+                .expect("Could not delete file link destination file");
 
-                link.delete()
-                    .expect("Could not delete file link destination file");
-                assert!(!link.destination.exists());
-            }
+            // Check that the file link's destination file no longer exists
+            assert!(!link.destination.exists());
         }
 
         mod trait_tabled {
@@ -491,12 +576,16 @@ mod tests {
 
             use super::*;
 
+            /// Tests the implementation of FileLink::fields() for the Tabled trait
             #[test]
             fn fields() {
+                // Generate a file link
                 let (link, src, dst) = create_new_filelink();
 
+                // Get the Tabled fields for the file link
                 let fields = link.fields();
 
+                // Caclulate what the intended fileds for the file link should be
                 let source_path = src
                     .path()
                     .to_str()
@@ -507,15 +596,22 @@ mod tests {
                     .expect("Could not get destination path as string");
                 let intendeds = vec![source_path, destination_path];
 
+                // Check accuracy for each field
                 for (field, intended) in zip(fields, intendeds) {
                     assert_eq!(field, intended);
                 }
             }
 
+            /// Tests the implementation of FileLink::headers() for the Tabled trait
             #[test]
             fn headers() {
+                // Get the Tabled headers for the file link
                 let headers = FileLink::headers();
+
+                // Store what the intended headers for the file link should be
                 let intendeds = vec!["Source", "Destination"];
+
+                // Check accuracy for each header
                 for (header, intended) in zip(headers, intendeds) {
                     assert_eq!(header, intended);
                 }
