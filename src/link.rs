@@ -263,7 +263,7 @@ mod tests {
             /// - Destination file (absolute path)
             #[test]
             fn source_does_not_exist() {
-                // Get the absolute filepath to a non-existent file
+                // Get the absolute filepath to a nonexistent file
                 let source =
                     absolute("does/not/exist").expect("Could not get absolute path of source");
 
@@ -371,7 +371,7 @@ mod tests {
                 // Generate a file link
                 let (mut filelink, _src, _dst) = create_new_unwritten_filelink();
 
-                // Set the destination to a non-existent file and check it doesn't already exist
+                // Set the destination to a nonexistent file and check it doesn't already exist
                 filelink.destination = filelink.destination.join("inner").join("newfile");
                 assert!(!filelink.destination.parent().unwrap().exists());
 
@@ -538,13 +538,13 @@ mod tests {
                 // Generate a file link
                 let (mut link, mut _src, _dst) = create_new_filelink();
 
-                // Set the source to a non-existent file
+                // Set the source to a nonexistent file
                 link.source = link.source.join("does/not/exist");
 
                 // Check that update the file link returns an error
                 let error = link
                     .update()
-                    .expect_err("Updated using non-existent source file");
+                    .expect_err("Updated using nonexistent source file");
                 assert_eq!(error, FileUpdateError::CopyFailed);
             }
         }

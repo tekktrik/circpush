@@ -553,7 +553,7 @@ mod test {
             let expected = format!("Workspace '{name}' does not exist");
 
             let response = rename_workspace(&name, "newname")
-                .expect_err("Successfully renamed non-existent workspace");
+                .expect_err("Successfully renamed nonexistent workspace");
 
             crate::test_support::restore_previous_state(preexisted);
 
@@ -595,7 +595,7 @@ mod test {
 
             let expected = format!("Workspace '{name}' does not exist");
             let response =
-                delete_workspace(name).expect_err("Successfully deleted non-existent workspace");
+                delete_workspace(name).expect_err("Successfully deleted nonexistent workspace");
 
             assert_eq!(expected, response);
         }
@@ -677,7 +677,7 @@ mod test {
 
             let expected = format!("Workspace '{name}' does not exist");
             let response =
-                view_workspace(name, true).expect_err("Successfully viewed non-existent workspace");
+                view_workspace(name, true).expect_err("Successfully viewed nonexistent workspace");
 
             crate::test_support::restore_previous_state(preexisted);
 
