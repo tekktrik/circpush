@@ -210,9 +210,9 @@ mod test {
 
     use super::*;
 
+    /// Tests that the ping function returns an error if the server is not running
     #[test]
     #[serial_test::serial]
-    /// Tests that the ping function returns an error if the server is not running
     fn ping_error() {
         // Get the expected error message
         let expected_err = "ERROR: Did not receive expected ping response";
@@ -225,9 +225,9 @@ mod test {
         assert_eq!(&err_msg, expected_err);
     }
 
+    /// Tests that the echo function returns an error if the server is not running  
     #[test]
     #[serial_test::serial]
-    /// Tests that the echo function returns an error if the server is not running
     fn echo_error() {
         // Get the expected error message
         let expected_err = "ERROR: Did not receive echo response";
@@ -240,9 +240,9 @@ mod test {
         assert_eq!(&err_msg, expected_err);
     }
 
+    /// Tests that the stop server function returns an error if the server is not running
     #[test]
     #[serial_test::serial]
-    /// Tests that the stop server function returns an error if the server is not running
     fn stop_server_error() {
         // Get the expected error message
         let expected_err = "ERROR: Did not receive expected response";
@@ -255,9 +255,9 @@ mod test {
         assert_eq!(&err_msg, expected_err);
     }
 
+    /// Tests that the start monitor function returns an error if the server is not running
     #[test]
     #[serial_test::serial]
-    /// Tests that the start monitor function returns an error if the server is not running
     fn start_monitor_error() {
         // Get the expected error message
         let resp_msg = "ERROR: Could not start link";
@@ -274,9 +274,9 @@ mod test {
         assert_eq!(&msg, resp_msg);
     }
 
+    /// Tests that the stop monitor function returns an error if the server is not running
     #[test]
     #[serial_test::serial]
-    /// Tests that the stop monitor function returns an error if the server is not running
     fn stop_monitor_error() {
         // Get the expected error message
         let resp_msg = "ERROR: Could not stop link";
@@ -289,9 +289,9 @@ mod test {
         assert_eq!(&msg, resp_msg);
     }
 
+    /// Tests that the get monitor list function returns an error if the server is not running
     #[test]
     #[serial_test::serial]
-    /// Tests that the get monitor list function returns an error if the server is not running
     fn get_monitor_list_error() {
         // Get the expected error message
         let resp_msg = "ERROR: Could not retrieve link(s)";
@@ -304,9 +304,9 @@ mod test {
         assert_eq!(&msg, resp_msg);
     }
 
+    /// Tests that the save workspace function returns an error if the server is not running
     #[test]
     #[serial_test::serial]
-    /// Tests that the save workspace function returns an error if the server is not running
     fn save_workspace_error() {
         // Get the expected error message
         let resp_msg = "ERROR: Could not retrieve link(s)";
@@ -319,9 +319,9 @@ mod test {
         assert_eq!(&msg, resp_msg);
     }
 
+    /// Tests that the set workspace name function returns an error if the server is not runnin
     #[test]
     #[serial_test::serial]
-    /// Tests that the set workspace name function returns an error if the server is not runnin
     fn set_workspace_name_error() {
         // Get the expected error message
         let resp_msg = "ERROR: Did not receive expected response";
@@ -334,9 +334,9 @@ mod test {
         assert_eq!(&msg, resp_msg);
     }
 
+    /// Tests that the load workspace function returns an error if the server is not runnin
     #[test]
     #[serial_test::serial]
-    /// Tests that the load workspace function returns an error if the server is not runnin
     fn load_workspace_error() {
         // Get the expected error message
         let resp_msg = "ERROR: Could not load the workspace";
@@ -349,9 +349,9 @@ mod test {
         assert_eq!(&msg, resp_msg);
     }
 
+    /// Tests that the get current workspace function returns an error if the server is not runnin
     #[test]
     #[serial_test::serial]
-    /// Tests that the get current workspace function returns an error if the server is not runnin
     fn get_current_workspace_error() {
         // Get the expected error message
         let resp_msg = "ERROR: Could not retrieve workspace name";

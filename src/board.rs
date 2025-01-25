@@ -23,9 +23,9 @@ mod test {
 
     use super::*;
 
+    /// Tests the ability to detect a connected CircuitPython board
     #[test]
     #[serial_test::serial]
-    /// Tests the ability to detect a connected CircuitPython board
     fn detection() {
         // Find the connected CircuitPython board
         let mount_point: PathBuf = find_circuitpy().expect("Could not find CircuitPython board");
