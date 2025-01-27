@@ -70,25 +70,12 @@ impl FileLink {
     pub fn ensure_writepath(&self) -> Result<(), FileLinkCreationError> {
         // Skip if the destination already exists
         if !self.destination.exists() {
-            // // Check the parent directory of the destination
-            // let dest_parent = self.destination.parent();
-            // match dest_parent {
-            //     // The parent folder is valid
-            //     Some(parent_path) => {
-            //         // Attempt to create all necessary directories, return an error if unsuccessful
-            //         if create_dir_all(parent_path).is_err() {
-            //             return Err(FileLinkCreationError::DestinationSetup);
-            //         }
-            //     }
-            //     // The parent folder is invalid
-            //     None => return Err(FileLinkCreationError::InvalidDestination),
-            // }
-
             // Check the parent directory of the destination
             let parent_path = self
                 .destination
                 .parent()
                 .expect("Could not get the parent of the destination");
+
             // Attempt to create all necessary directories, return an error if unsuccessful
             if create_dir_all(parent_path).is_err() {
                 return Err(FileLinkCreationError::DestinationSetup);
@@ -121,9 +108,7 @@ impl FileLink {
         };
 
         // Set the destination file modification time to now
-        // let mod_filetime = FileTime::now();
         let mod_filetime = get_file_mtime(&self.source);
-        // let  = FileTime::from_unix_time(x.0, x.1)
         set_file_mtime(&self.destination, mod_filetime)
             .expect("Could not set destination file modification time");
 
@@ -135,21 +120,6 @@ impl FileLink {
         fs::remove_file(&self.destination)
     }
 }
-
-// impl PartialEq for FileLink {
-//     fn eq(&self, other: &Self) -> bool {
-//         self.source == other.source && self.destination == other.destination
-//     }
-// }
-
-// impl Eq for FileLink {}
-
-// impl Hash for FileLink {
-//     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-//         self.source.hash(state);
-//         self.destination.hash(state);
-//     }
-// }
 
 impl Tabled for FileLink {
     /// The number of fields be displayed

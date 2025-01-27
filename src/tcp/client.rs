@@ -132,6 +132,7 @@ pub fn save_workspace(name: &str, desc: &str, force: bool) -> Result<String, Str
         Err(error) => return Err(error),
     };
 
+    // If there are no file monitors, return an error
     if monitor_list.is_empty() {
         return Err(String::from("No file monitors are active to save"));
     }
@@ -147,7 +148,6 @@ pub fn save_workspace(name: &str, desc: &str, force: bool) -> Result<String, Str
         Err(_) => Err(format!(
             "Workspace '{name}' already exists, use --force to overwrite it"
         )),
-        // Err(WorkspaceSaveError::BadFileSave) => Err(format!("Could not save workspace '{name}'")),
     }
 }
 
@@ -168,6 +168,7 @@ pub fn load_workspace(name: &str) -> Result<String, String> {
         return Err(String::from("ERROR: Could not load the workspace"));
     }
 
+    // Load the workspace from the name
     let workspace = match Workspace::from_name(name) {
         Ok(workspace) => workspace,
         Err(WorkspaceLoadError::UnexpectedFormat) => {
@@ -176,6 +177,7 @@ pub fn load_workspace(name: &str) -> Result<String, String> {
         Err(_) => return Err(format!("Workspace '{name}' does not exist")),
     };
 
+    // Start the file monitors from the workspace
     for file_monitor in workspace.monitors {
         start_monitor(
             file_monitor.read_pattern,
@@ -185,24 +187,28 @@ pub fn load_workspace(name: &str) -> Result<String, String> {
         .expect("Could not start all file monitors");
     }
 
+    // Set the workspace name for the server
     set_workspace_name(name).expect("Could not set the name for the workspace");
 
+    // Retutnr that the workspace was successfully started
     Ok(format!("Started workspace '{name}'"))
 }
 
 /// View the current workspace
 pub fn get_current_workspace() -> Result<String, String> {
     // Get the response of the server communication
-    let mut name = match communicate(Request::ViewWorkspaceName) {
+    let mut msg = match communicate(Request::ViewWorkspaceName) {
         Ok(Response::Message { msg }) => msg,
         _ => return Err(String::from("ERROR: Could not retrieve workspace name")),
     };
 
-    if name.is_empty() {
-        name = String::from("No workspace is currently active");
+    // If there is no name, instead return a message saying no workspace is active
+    if msg.is_empty() {
+        msg = String::from("No workspace is currently active");
     }
 
-    Ok(name)
+    // Return the message
+    Ok(msg)
 }
 
 #[cfg(test)]

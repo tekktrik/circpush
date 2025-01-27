@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+/// The response sent by the server to the client confirming that it will stop
 pub const STOP_RESPONSE: &str = "@stopping";
 
 /// Various types of requests from the TCP client for the server

@@ -12,13 +12,15 @@ use std::time::Duration;
 /// Default port on which to start the server
 pub const PORT: u16 = 61553;
 
+/// State of the server, consisting of the file monitors and the current
+/// workspace name, if any
 struct ServerState {
     monitors: Vec<FileMonitor>,
     workspace_name: String,
 }
 
-#[cfg(target_family = "unix")]
 /// Starts the server in a seperate process by using `circpush run`
+#[cfg(target_family = "unix")]
 pub fn start_server() -> String {
     let _daemon = Command::new("circpush")
         .arg("server")
@@ -29,8 +31,8 @@ pub fn start_server() -> String {
     format!("Server started on port {PORT}")
 }
 
-#[cfg(target_family = "windows")]
 /// Starts the server in a seperate process by using `circpush run`
+#[cfg(target_family = "windows")]
 pub fn start_server() -> String {
     use std::os::windows::process::CommandExt;
     use windows_sys::Win32::System::Threading::{CREATE_NEW_PROCESS_GROUP, DETACHED_PROCESS};
@@ -177,6 +179,7 @@ fn handle_connection(mut stream: TcpStream, state: &mut ServerState) -> bool {
     !matches!(&request, Request::Shutdown)
 }
 
+/// Run the server loop
 pub fn run_server() -> String {
     // Get the TCP listener
     let listener = bind_socket();
@@ -201,7 +204,6 @@ pub fn run_server() -> String {
                 }
             }
             // No connection received before non-blocking timeout
-            // Err(e) if e.kind() == ErrorKind::WouldBlock => {
             _ => {
                 let mut has_broken_monitors = false;
                 for monitor in &mut state.monitors {
@@ -215,8 +217,7 @@ pub fn run_server() -> String {
                         .monitors
                         .retain(|monitor| monitor.write_directory_exists());
                 }
-            } // Any other errors
-              // Err(_e) => panic!("Could not accept incoming connection"),
+            }
         }
         sleep(sleep_duration); // TODO: Remove later?
     }

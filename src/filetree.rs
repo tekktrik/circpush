@@ -1,13 +1,18 @@
 use std::{fs, path::PathBuf};
 
-pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
+/// The application directory name
+pub const APP_DIRNAME: &str = env!("CARGO_PKG_NAME");
+
+/// The workspace directory name
 pub const WORKSPACE_DIRNAME: &str = "workspaces";
 
+/// Get the application directory path
 pub fn get_app_dir() -> PathBuf {
     let config_dir = dirs::config_dir().expect("Could not locate config directory");
-    config_dir.join(APP_NAME)
+    config_dir.join(APP_DIRNAME)
 }
 
+/// Ensure the application directory exists
 pub fn ensure_app_dir() {
     let dir = get_app_dir();
     fs::create_dir_all(dir).expect("Could not create application directory");
