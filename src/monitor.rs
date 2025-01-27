@@ -242,20 +242,27 @@ mod tests {
 
         use super::*;
 
+        /// Creates a new file monitor for a tests, with created temporary read and write directory
         fn get_monitor() -> (FileMonitor, TempDir, TempDir) {
+            // Create a new temporary directory for the read directory
             let read_directory =
                 TempDir::new().expect("Could not get the temporary read directory");
+
+            // Create four files in the read directory
             for i in 0..4 {
                 let filename = format!("test_file{i}");
                 fs::File::create_new(read_directory.path().join(&filename))
                     .expect(&format!("Could not create {filename}"));
             }
 
+            // Create a new temporary for the write directory
             let write_directory =
                 TempDir::new().expect("Could not get the temporary write directory");
 
+            // STore the read pattern for the file monitor
             let read_pattern = "test*";
 
+            // Create the file monitor
             let monitor = FileMonitor {
                 read_pattern: read_pattern.to_string(),
                 write_directory: write_directory.path().to_path_buf(),
@@ -263,17 +270,21 @@ mod tests {
                 links: HashSet::new(),
             };
 
+            // Return the file monitor and temporary read and write directories
             (monitor, read_directory, write_directory)
         }
 
+        /// Tests FileMonitor::new()
         #[test]
         fn new() {
+            // Create a new file monitor
             let read_pattern = "test_file";
             let write_directory = TempDir::new().expect("Could not get temporary directory");
             let base_directory = TempDir::new().expect("Could not get temporary directory");
             let monitor =
                 FileMonitor::new(&read_pattern, write_directory.path(), base_directory.path());
 
+            // Check the fields of the file monitor
             assert_eq!(monitor.read_pattern, read_pattern);
             assert_eq!(monitor.write_directory, write_directory.into_path());
             assert_eq!(monitor.base_directory, base_directory.into_path());
@@ -282,29 +293,40 @@ mod tests {
 
         mod get_write_path {
 
-            use std::str::FromStr;
-
             use super::*;
 
+            /// Tests the successful use of FileMonitor::get_write_path()
             #[test]
             fn success() {
+                // Generate a file monitor
                 let (monitor, read_dir, write_dir) = get_monitor();
+
+                // Get a filepath for a hypohetical file in the read directory
                 let filename = "test_file1";
                 let filepath = read_dir.path().join(&filename);
 
+                // Get the write path for the hypothetical file
                 let write_path = monitor
                     .get_write_path(&filepath)
                     .expect("Could not get write path for the file");
+
+                // Calculate the intended write path for the hypothetical file
                 let intended_path = write_dir.path().join(&filename);
 
+                // Check the write paths are the same
                 assert_eq!(write_path, intended_path);
             }
 
+            /// Tests the unsuccessful use of FileMonitor::get_write_path()
             #[test]
             fn error() {
+                // Generate a file monitor
                 let (monitor, _read_dir, _write_dir) = get_monitor();
-                let relative_path = &PathBuf::from_str("relative_path")
-                    .expect("Could not get a path for the test variable");
+
+                // Create a hypothetical relative filepath
+                let relative_path = PathBuf::from("../relative_path");
+
+                // Check that getting write path of the hypothetical relative fileoath is an error
                 let error = monitor.get_write_path(&relative_path).expect_err(
                     "Successfully calculated write path when it should have been impossible",
                 );
@@ -316,29 +338,44 @@ mod tests {
 
             use super::*;
 
+            /// Tests the successful use case of FileMonitor::calculate_monitored_files()
             #[test]
             fn success() {
+                // Generate a file monitor
                 let (monitor, read_dir, write_dir) = get_monitor();
+
+                // Calculate the files to be monitored
                 let files = monitor
                     .calculate_monitored_files()
                     .expect("Could not calculate the monitored files");
 
+                // Check that four files should be monitored
                 assert_eq!(files.len(), 4);
+
+                // For each file index
                 for i in 0..4 {
+                    // Get the read and write filepaths of a monitored file
                     let filename = format!("test_file{i}");
                     let read_filepath = read_dir.path().join(&filename);
                     let write_filepath = write_dir.path().join(&filename);
+
+                    // Check that the corresponding file link is contained in the files claculated
                     let link = FileLink::new(&read_filepath, &write_filepath)
                         .expect("Could not create file link");
                     assert!(files.contains(&link));
                 }
             }
 
+            /// Tests the unsuccessful use case of FileMonitor::calculate_monitored_files()
             #[test]
             fn error() {
+                // Generate a file monitor
                 let (mut monitor, _read_dir, _write_dir) = get_monitor();
-                monitor.read_pattern = "text[text".to_string();
 
+                // Set the file monitor read pattern to a bad regex
+                monitor.read_pattern = String::from("text[text");
+
+                // Check that calculating the monitored files causes an error
                 let error = monitor
                     .calculate_monitored_files()
                     .expect_err("Matched bad glob pattern");
@@ -352,203 +389,286 @@ mod tests {
 
             use filetime::{set_file_mtime, FileTime};
 
+            /// Tests FileMonitor::update_links(), where:
+            ///
+            /// - A tracked file is modified
             #[test]
             fn modification() {
+                // Generate a file monitor
                 let (mut monitor, read_dir, write_dir) = get_monitor();
 
-                let name0 = "test_file0";
-                let read_path0 = read_dir.path().join(&name0);
-                let write_path0 = write_dir.path().join(&name0);
+                // Get the read and write paths for the test file
+                let filename = "test_file0";
+                let read_path = read_dir.path().join(&filename);
+                let write_path = write_dir.path().join(&filename);
 
-                let contents0 = "updated";
-                fs::write(&read_path0, contents0).expect("Could not write to the first file");
+                // Write test data to the read filepath
+                let contents = "updated";
+                fs::write(&read_path, contents).expect("Could not write to the first file");
 
-                assert!(read_path0.exists());
-                assert!(!write_path0.exists());
+                // Check that the read file exists and the write file does not exist yet
+                assert!(read_path.exists());
+                assert!(!write_path.exists());
 
                 // Update the links
                 monitor.update_links().expect("Unable to update links");
 
-                assert!(read_path0.exists());
-                assert!(write_path0.exists());
+                // Check that the read file still exists and the write file now exists
+                assert!(read_path.exists());
+                assert!(write_path.exists());
 
-                let updated0 =
-                    fs::read_to_string(&read_path0).expect("Could not read the first test file");
-                assert_eq!(&updated0, contents0);
+                // Check that the contents of the updated file written to match the expected contents
+                let updated =
+                    fs::read_to_string(&write_path).expect("Could not read the first test file");
+                assert_eq!(&updated, contents);
             }
 
+            /// Tests FileMonitor::update_links(), where:
+            ///
+            /// - A file that would be tracked is deleted before updating
             #[test]
             fn predeletion() {
+                // Generate a file monitor
                 let (mut monitor, read_dir, write_dir) = get_monitor();
 
-                let name1 = "test_file1";
-                let read_path1 = read_dir.path().join(&name1);
-                let write_path1 = write_dir.path().join(&name1);
+                // Get the read and write paths for the test file
+                let filename = "test_file1";
+                let read_path = read_dir.path().join(&filename);
+                let write_path = write_dir.path().join(&filename);
 
-                fs::remove_file(&read_path1).expect("Could not delete the second test file");
+                // Remove the read file
+                fs::remove_file(&read_path).expect("Could not delete the second test file");
 
-                assert!(!read_path1.exists());
-                assert!(!write_path1.exists());
+                // Check that neither the read nor write file exists
+                assert!(!read_path.exists());
+                assert!(!write_path.exists());
 
                 // Update the links
                 monitor.update_links().expect("Unable to update links");
 
-                // Check results of deleting the second test file
-                assert!(!read_path1.exists());
-                assert!(!write_path1.exists());
+                // Check that that read and write files still don't exist
+                assert!(!read_path.exists());
+                assert!(!write_path.exists());
             }
 
+            /// Tests FileMonitor::update_links(), where:
+            ///
+            /// - A tracked file is updated before being updated
             #[test]
             fn prewrite() {
+                // Generate a file monitor
                 let (mut monitor, read_dir, write_dir) = get_monitor();
 
-                // Pre-write the third file (which also updates its modification time)
-                let name2 = "test_file2";
-                let read_path2 = read_dir.path().join(&name2);
-                let write_path2 = write_dir.path().join(&name2);
+                // Get the read and write paths for the test file
+                let filename = "test_file2";
+                let read_path = read_dir.path().join(&filename);
+                let write_path = write_dir.path().join(&filename);
 
+                // Write to the writefile ahead of updateing (which also updates its modification time)
                 let write_contents2 = "testdata";
-                fs::write(&write_path2, write_contents2)
+                fs::write(&write_path, write_contents2)
                     .expect("Could not write to the third test file");
 
-                assert!(read_path2.exists());
-                assert!(write_path2.exists());
+                // Check that the read and write files both exist
+                assert!(read_path.exists());
+                assert!(write_path.exists());
 
                 // Update the links
                 monitor.update_links().expect("Unable to update links");
 
-                // Check results of the pre-written third test file
-                assert!(read_path2.exists());
-                assert!(write_path2.exists());
+                // Check that the read and write files still exist
+                assert!(read_path.exists());
+                assert!(write_path.exists());
 
-                let updated2 =
-                    fs::read_to_string(&write_path2).expect("Could not read the thrid test file");
-                assert_eq!(&updated2, write_contents2);
+                // CHeck that the write file contents have not changed
+                let updated =
+                    fs::read_to_string(&write_path).expect("Could not read the thrid test file");
+                assert_eq!(&updated, write_contents2);
             }
 
+            /// Tests FileMonitor::update_links(), where:
+            ///
+            /// - A newly created file yet to be tracked is updated
             #[test]
             fn new() {
+                // Generate a file monitor
                 let (mut monitor, read_dir, write_dir) = get_monitor();
 
-                let name3 = "test_file3";
-                let read_path3 = read_dir.path().join(&name3);
-                let write_path3 = write_dir.path().join(&name3);
+                // Get the read and write paths for the test file
+                let filename = "test_file3";
+                let read_path = read_dir.path().join(&filename);
+                let write_path = write_dir.path().join(&filename);
 
-                assert!(read_path3.exists());
-                assert!(!write_path3.exists());
+                // Check that only the read file exists
+                assert!(read_path.exists());
+                assert!(!write_path.exists());
 
                 // Update the links
                 monitor.update_links().expect("Unable to update links");
 
-                // Check results of updating the fourth test file
-                assert!(read_path3.exists());
-                assert!(write_path3.exists());
+                // Check that both the read and write files exist
+                assert!(read_path.exists());
+                assert!(write_path.exists());
             }
 
+            /// Tests FileMonitor::update_links(), where:
+            ///
+            /// - A newly created and written to file yet to be tracked is updated
             #[test]
-            fn detection() {
+            fn new_and_modified() {
+                // Generate a file monitor
                 let (mut monitor, read_dir, write_dir) = get_monitor();
 
-                let name4 = "test_file4";
-                let read_path4 = read_dir.path().join(&name4);
-                let write_path4 = write_dir.path().join(&name4);
+                // Get the read and write paths for the test file
+                let filename = "test_file4";
+                let read_path = read_dir.path().join(&filename);
+                let write_path = write_dir.path().join(&filename);
 
-                let contents4 = "newdata";
-                fs::write(&read_path4, contents4)
+                // Write to the read file before updating
+                let contents = "newdata";
+                fs::write(&read_path, contents)
                     .expect("Could not create and write to the fifth test file");
 
-                assert!(read_path4.exists());
-                assert!(!write_path4.exists());
+                // Check that only the read file exists
+                assert!(read_path.exists());
+                assert!(!write_path.exists());
 
                 // Update the links
                 monitor.update_links().expect("Unable to update links");
 
-                // Check results of updating the fifth test file
-                assert!(read_path4.exists());
-                assert!(write_path4.exists());
-                let updated4 =
-                    fs::read_to_string(&write_path4).expect("Could not read the fifth test file");
-                assert_eq!(&updated4, contents4);
+                // Check that both the read and write files exist
+                assert!(read_path.exists());
+                assert!(write_path.exists());
+
+                // Check that the contents of the write file match what was written
+                let updated =
+                    fs::read_to_string(&write_path).expect("Could not read the fifth test file");
+                assert_eq!(&updated, contents);
             }
 
+            /// Tests FileMonitor::update_links(), where:
+            ///
+            /// - The modification time of the source is updated
             #[test]
             fn updated_mtime() {
+                // Generate a file monitor
                 let (mut monitor, read_dir, write_dir) = get_monitor();
 
-                // Add a sixth file which will be updated
-                let name5 = "test_file5";
-                let read_path5 = read_dir.path().join(&name5);
-                let write_path5 = write_dir.path().join(&name5);
-                let write_contents5 = "oldtext";
-                let contents5 = "newtext";
-                assert_ne!(write_contents5, contents5);
-                fs::write(&write_path5, &write_contents5)
+                // Get the read and write paths for the test file
+                let filename = "test_file5";
+                let read_path = read_dir.path().join(&filename);
+                let write_path = write_dir.path().join(&filename);
+
+                // Get different contents to write for each file
+                let write_contents = "oldtext";
+                let contents = "newtext";
+                assert_ne!(write_contents, contents);
+
+                // Write each of the contents to the read and write files
+                fs::write(&write_path, &write_contents)
                     .expect("Could not write to the write directory for the sixth file");
-                fs::write(&read_path5, &contents5)
+                fs::write(&read_path, &contents)
                     .expect("Could not write to the read directory for the sixth file");
-                set_file_mtime(&write_path5, FileTime::from_unix_time(0, 0))
+
+                // Set the modification time of the write file to before the read file (read updated after write)
+                set_file_mtime(&write_path, FileTime::from_unix_time(0, 0))
                     .expect("Could not set file modification time");
-                assert!(read_path5.exists());
-                assert!(write_path5.exists());
+
+                // Check that both the read and write files exist
+                assert!(read_path.exists());
+                assert!(write_path.exists());
 
                 // Update the links
                 monitor.update_links().expect("Unable to update links");
 
-                // Check results of updating the sixth test file
-                assert!(read_path5.exists());
-                assert!(write_path5.exists());
-                let updated5 =
-                    fs::read_to_string(&write_path5).expect("Could not read the sixth test file");
-                assert_eq!(&updated5, contents5);
+                // Check that both the read and write files still exist
+                assert!(read_path.exists());
+                assert!(write_path.exists());
+
+                // CHeck that the write file contents now match those of the read file
+                let updated =
+                    fs::read_to_string(&write_path).expect("Could not read the sixth test file");
+                assert_eq!(&updated, contents);
             }
 
+            /// Tests FileMonitor::update_links(), where:
+            ///
+            /// - A deletion of the source file results in the deletion of the destination file
             #[test]
             fn deletion() {
+                // Generate a file monitor
                 let (mut monitor, read_dir, write_dir) = get_monitor();
 
-                let name = "test_file1";
-                let read_path = read_dir.path().join(&name);
-                let write_path = write_dir.path().join(&name);
+                // Get the read and write paths for the test file
+                let filename = "test_file1";
+                let read_path = read_dir.path().join(&filename);
+                let write_path = write_dir.path().join(&filename);
 
+                // Create the new write path file
                 fs::File::create_new(&write_path).expect("Could not create file");
+
+                // Insert the new file link as a monitored link
                 let link =
                     FileLink::new(&read_path, &write_path).expect("Could not create file link");
                 monitor.links.insert(link);
 
+                // Delete the existing source file
                 fs::remove_file(&read_path).expect("Could not delete filed");
 
+                // Update the links
                 monitor
                     .update_links()
                     .expect("Unable to delete file as part of update");
 
+                // Check that the write path no longer exists
                 assert!(!write_path.exists());
             }
 
+            /// Tests FileMonitor::update_links(), where:
+            ///
+            /// - A source file deletion results in trying to delete a nonexistent destination file
             #[test]
             fn file_io_error() {
+                // Generate a file monitor
                 let (mut monitor, read_dir, write_dir) = get_monitor();
 
-                let name = "test_file4";
-                let read_file = read_dir.path().join(&name);
-                let write_file = write_dir.path().join(&name);
+                // Get the read and write paths for the test file
+                let filename = "test_file4";
+                let read_file = read_dir.path().join(&filename);
+                let write_file = write_dir.path().join(&filename);
 
+                // Create the new read path file
                 fs::File::create_new(&read_file).expect("Could not create file");
+
+                // Create a new file link for the read path
                 let link =
                     FileLink::new(&read_file, &write_file).expect("Could not create file link");
+
+                // Delete the created read path file
                 fs::remove_file(&read_file).expect("Could not delete file");
+
+                // Insert the file link as a monitored link
                 monitor.links.insert(link);
 
+                // Check that updating the links causes an error
                 let error = monitor
                     .update_links()
                     .expect_err("Successfully updated broken link");
                 assert_eq!(error, UpdateError::FileIOError);
             }
 
+            /// Tests FileMonitor::update_links(), where:
+            ///
+            /// - A bad glob pattern is used for the read pattern
             #[test]
             fn glob_error() {
+                // Generate a file monitor
                 let (mut monitor, _read_dir, _write_dir) = get_monitor();
+
+                // Set the read pattern to a bad glob pattern
                 monitor.read_pattern = "text[text".to_string();
 
+                // Check that updating the links causes an error
                 let error = monitor
                     .update_links()
                     .expect_err("Matched bad glob pattern");
@@ -560,22 +680,40 @@ mod tests {
 
             use super::*;
 
+            /// Tests getting the file montior as a table record, where:
+            ///
+            /// - The paths are requested as absolute
             #[test]
             fn absolute() {
+                // Generate a file monitor
                 let (monitor, _read_dir, _write_dir) = get_monitor();
+
+                // Get the file monitor as a table record
                 let table = monitor.to_table_record(true);
+
+                // Calculate the expected table record
                 let read_pattern = monitor.read_pattern;
                 let write_directory = monitor.write_directory.to_str().unwrap().to_string();
                 let base_directory = monitor.base_directory.to_str().unwrap().to_string();
                 let expected = vec![read_pattern, base_directory, write_directory];
+
+                // Check that both the generated and calculated table record match
                 assert_eq!(table, expected);
             }
 
+            /// Tests getting the file montior as a table record, where:
+            ///
+            /// - The paths are requested as relative to the current working directory
             #[test]
             #[serial_test::serial]
             fn relative() {
+                // Generate a file monitor
                 let (monitor, _read_dir, _write_dir) = get_monitor();
+
+                // Get the file monitor as a table record
                 let table = monitor.to_table_record(false);
+
+                // Calculate the expected table record
                 let read_pattern = monitor.read_pattern;
                 let current_dir = env::current_dir().expect("Could not get the current directory");
                 let base_directory = diff_paths(&monitor.base_directory, &current_dir)
@@ -589,17 +727,31 @@ mod tests {
                     .unwrap()
                     .to_string();
                 let expected = vec![read_pattern, base_directory, write_directory];
+
+                // Check that both the generated and calculated table record match
                 assert_eq!(table, expected);
             }
 
+            /// Tests getting the file montior as a table record, where:
+            ///
+            /// - The paths are requested as relative to the base directory
             #[test]
             #[serial_test::serial]
             fn relative_to_base() {
+                // Generate a file monitor
                 let (monitor, _read_dir, _write_dir) = get_monitor();
+
+                // Store the current working directory path
                 let current_dir = env::current_dir().expect("Could not get the current directory");
+
+                // Set the working directory to the base directory of the file monitor
                 env::set_current_dir(&monitor.base_directory)
                     .expect("Could not set the current directory for the test");
+
+                // Get the file monitor as a table record
                 let table = monitor.to_table_record(false);
+
+                // Calculate the expected table record
                 let read_pattern = monitor.read_pattern;
                 let base_directory = String::from(".");
                 let write_directory =
@@ -609,20 +761,36 @@ mod tests {
                         .unwrap()
                         .to_string();
                 let expected = vec![read_pattern, base_directory, write_directory];
+
+                // Check that both the generated and calculated table record match
                 assert_eq!(table, expected);
+
+                // Reset the working directory
                 env::set_current_dir(&current_dir)
                     .expect("Could not reset the current directory for the test");
                 assert_eq!(env::current_dir().unwrap(), current_dir);
             }
 
+            /// Tests getting the file montior as a table record, where:
+            ///
+            /// - The paths are requested as relative to the write directory
             #[test]
             #[serial_test::serial]
             fn relative_to_write() {
+                // Generate a file montior
                 let (monitor, _read_dir, _write_dir) = get_monitor();
+
+                // Store the current working directory path
                 let current_dir = env::current_dir().expect("Could not get the current directory");
+
+                // Set the working directory to the base directory of the file monitor
                 env::set_current_dir(&monitor.write_directory)
                     .expect("Could not set the current directory for the test");
+
+                // Get the file monitor as a table record
                 let table = monitor.to_table_record(false);
+
+                // Calculate the expected table record
                 let read_pattern = monitor.read_pattern;
                 let base_directory =
                     diff_paths(&monitor.base_directory, &env::current_dir().unwrap())
@@ -632,13 +800,18 @@ mod tests {
                         .to_string();
                 let write_directory = String::from(".");
                 let expected = vec![read_pattern, base_directory, write_directory];
+
+                // Check that both the generated and calculated table record match
                 assert_eq!(table, expected);
+
+                // Reset the working directory
                 env::set_current_dir(&current_dir)
                     .expect("Could not reset the current directory for the test");
                 assert_eq!(env::current_dir().unwrap(), current_dir);
             }
         }
 
+        /// Tests FileMonitor::table_header()
         #[test]
         fn table_header() {
             let header = FileMonitor::table_header();
@@ -651,23 +824,35 @@ mod tests {
             assert_eq!(header, intended);
         }
 
+        /// Tests FileMonitor::write_directory_exists()
         #[test]
         fn write_directory_exists() {
+            // Generate a file monitor with an existing write directory
             let (mut monitor, _read_dir, _write_dir) = get_monitor();
+
+            // Check that the write directory exists
             assert!(monitor.write_directory_exists());
 
+            // Set the write directory to a nonexistent file
             monitor.write_directory = PathBuf::from("/does/not/exist");
+
+            // Check that the write directory does not exist
             assert!(!monitor.write_directory_exists());
         }
 
+        /// Tests FileMonitor::clone_linkless()
         #[test]
         fn clone_linkless() {
+            // Generate a file monitor
             let (mut monitor, _readdir, _writedir) = get_monitor();
 
+            // Clone the file monitor linkless
             let linkless = monitor.clone_linkless();
 
+            // Clear the links from the original file monitor
             monitor.links.clear();
 
+            // Check that both file monitors are still equal
             assert_eq!(linkless, monitor);
         }
 
@@ -675,6 +860,9 @@ mod tests {
 
             use super::*;
 
+            /// Tests file monitor equality, where:
+            ///
+            /// - The file monitors are identical
             #[test]
             fn identical() {
                 let (monitor0, _read_dir, _write_dir) = get_monitor();
@@ -682,43 +870,87 @@ mod tests {
                 assert_eq!(monitor0, monitor1);
             }
 
+            /// Tests file monitor equality, where:
+            ///
+            /// - The only difference is the files monitored
             #[test]
             fn diff_links() {
+                // Generate a file monitor
                 let (monitor0, read_dir, write_dir) = get_monitor();
+
+                // Clone the monitor
                 let mut monitor1 = monitor0.clone();
-                let name = "test_file4";
-                let read_file = read_dir.path().join(&name);
-                let write_file = write_dir.path().join(&name);
+
+                // Get the read and write filepaths for a new file link
+                let filename = "test_file4";
+                let read_file = read_dir.path().join(&filename);
+                let write_file = write_dir.path().join(&filename);
+
+                // Create a new source file
                 fs::File::create_new(&read_file).expect("Could not create file");
+
+                // Insert a file link into the list of tracked links of the cloned monitor
                 let link =
                     FileLink::new(&read_file, &write_file).expect("Could not create file link");
                 monitor1.links.insert(link);
+
+                // Check that the file monitors are still equal
                 assert_eq!(monitor0, monitor1);
             }
 
+            /// Tests file monitor equality, where:
+            ///
+            /// - The only difference is the read patterns
             #[test]
             fn diff_read_pattern() {
+                // Generate a file monitor
                 let (monitor0, _read_dir, _write_dir) = get_monitor();
+
+                // Clone the file monitor
                 let mut monitor1 = monitor0.clone();
+
+                // Change the read pattern for the cloned file monitor
                 monitor1.read_pattern = String::from("different");
+
+                // Check that the file monitors are no longer equal
                 assert_ne!(monitor0, monitor1);
             }
 
+            /// Tests file monitor equality, where:
+            ///
+            /// - The only difference is the base directories
             #[test]
             fn diff_base_directory() {
+                // Generate a file monitor
                 let (monitor0, _read_dir, _write_dir) = get_monitor();
+
+                // Clone the file monitor
                 let mut monitor1 = monitor0.clone();
+
+                // Change the base directory for the cloned file monitor
                 let tempdir = TempDir::new().expect("Could not create new temporary directory");
                 monitor1.base_directory = tempdir.path().to_path_buf();
+
+                // Check that the file monitors are no longer equal
                 assert_ne!(monitor0, monitor1);
             }
 
+            /// Tests file monitor equality, where:
+            ///
+            /// - The only difference is the write directories
             #[test]
             fn diff_write_directory() {
+                // Generate a file monitor
                 let (monitor0, _read_dir, _write_dir) = get_monitor();
+
+                // Clone the file monitor
                 let mut monitor1 = monitor0.clone();
+
+                // Change the write directory for the cloned file monitor
                 let tempdir = TempDir::new().expect("Could not create new temporary directory");
                 monitor1.write_directory = tempdir.path().to_path_buf();
+
+                // Check that the file monitors are no longer equal
                 assert_ne!(monitor0, monitor1);
             }
         }
@@ -729,80 +961,142 @@ mod tests {
 
             use super::*;
 
+            /// Tests file monitor hash equality, where:
+            ///
+            /// - The file monitors are identical
             #[test]
             fn identical() {
+                // Generate a file monitor
                 let (monitor0, _read_dir, _write_dir) = get_monitor();
+
+                // Clone the file monitor
                 let monitor1 = monitor0.clone();
 
+                // Feed the first file monitor into its hasher
                 let mut hasher0 = DefaultHasher::new();
                 monitor0.hash(&mut hasher0);
+
+                // Feed the second file monitor into its hasher
                 let mut hasher1 = DefaultHasher::new();
                 monitor1.hash(&mut hasher1);
 
+                // Assert the hash values for the file monitors are both equal
                 assert_eq!(hasher0.finish(), hasher1.finish());
             }
 
+            /// Tests file monitor hash equality, where:
+            ///
+            /// - The only difference is the files monitored
             #[test]
             fn diff_links() {
+                // Generate a file monitor
                 let (monitor0, read_dir, write_dir) = get_monitor();
+
+                // Clone the file monitor
                 let mut monitor1 = monitor0.clone();
-                let name = "test_file4";
-                let read_file = read_dir.path().join(&name);
-                let write_file = write_dir.path().join(&name);
+
+                // Get the read and write filepaths for a new file link
+                let filename = "test_file4";
+                let read_file = read_dir.path().join(&filename);
+                let write_file = write_dir.path().join(&filename);
+
+                // Create a new source file
                 fs::File::create_new(&read_file).expect("Could not create file");
+
+                // Insert a file link into the list of tracked links of the cloned monitor
                 let link =
                     FileLink::new(&read_file, &write_file).expect("Could not create file link");
                 monitor1.links.insert(link);
 
+                // Feed the first file monitor into its hasher
                 let mut hasher0 = DefaultHasher::new();
                 monitor0.hash(&mut hasher0);
+
+                // Feed the second file monitor into its hasher
                 let mut hasher1 = DefaultHasher::new();
                 monitor1.hash(&mut hasher1);
 
+                // Check that the file monitors are still equal
                 assert_eq!(hasher0.finish(), hasher1.finish());
             }
 
+            /// Tests file monitor hash equality, where:
+            ///
+            /// - The only difference is the read patterns
             #[test]
             fn diff_read_pattern() {
+                // Generate a file monitor
                 let (monitor0, _read_dir, _write_dir) = get_monitor();
+
+                // Clone the file monitor
                 let mut monitor1 = monitor0.clone();
+
+                // Change the read pattern for the cloned monitor
                 monitor1.read_pattern = String::from("different");
 
+                // Feed the first file monitor into its hasher
                 let mut hasher0 = DefaultHasher::new();
                 monitor0.hash(&mut hasher0);
+
+                // Feed the second file monitor into its hasher
                 let mut hasher1 = DefaultHasher::new();
                 monitor1.hash(&mut hasher1);
 
+                // Check that the file monitors are no longer equal
                 assert_ne!(hasher0.finish(), hasher1.finish());
             }
 
+            /// Tests file monitor hash equality, where:
+            ///
+            /// - The only difference is the base directories
             #[test]
             fn diff_base_directory() {
+                // Generate a file monitor
                 let (monitor0, _read_dir, _write_dir) = get_monitor();
+
+                // Clone the file monitor
                 let mut monitor1 = monitor0.clone();
+
+                // Change the base directory for the cloned file monitor
                 let tempdir = TempDir::new().expect("Could not create new temporary directory");
                 monitor1.base_directory = tempdir.path().to_path_buf();
 
+                // Feed the first file monitor into its hasher
                 let mut hasher0 = DefaultHasher::new();
                 monitor0.hash(&mut hasher0);
+
+                // Feed the second file monitor into its hasher
                 let mut hasher1 = DefaultHasher::new();
                 monitor1.hash(&mut hasher1);
 
+                // Check that the file monitors are no longer equal
                 assert_ne!(hasher0.finish(), hasher1.finish());
             }
 
+            /// Tests file monitor hash equality, where:
+            ///
+            /// - The only difference is the write directories
             #[test]
             fn diff_write_directory() {
+                // Generate a file monitor
                 let (monitor0, _read_dir, _write_dir) = get_monitor();
+
+                // Clone the file monitor
                 let mut monitor1 = monitor0.clone();
+
+                // Change the write directory for the cloned file monitor
                 let tempdir = TempDir::new().expect("Could not create new temporary directory");
                 monitor1.write_directory = tempdir.path().to_path_buf();
 
+                // Feed the first file monitor into its hasher
                 let mut hasher0 = DefaultHasher::new();
                 monitor0.hash(&mut hasher0);
+
+                // Feed the second file monitor into its hasher
                 let mut hasher1 = DefaultHasher::new();
                 monitor1.hash(&mut hasher1);
 
+                // Check that the file monitors are no longer equal
                 assert_ne!(hasher0.finish(), hasher1.finish());
             }
         }
