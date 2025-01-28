@@ -12,10 +12,12 @@ pub struct Workspace {
     pub monitors: Vec<FileMonitor>,
 }
 
+/// The ways in which a workspace can fail to load
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WorkspaceLoadError {
-    BadFileRead,
+    /// The format of the workspace file is incorrect
     UnexpectedFormat,
+    /// The desired workspace file does not exist
     DoesNotExist,
 }
 
@@ -36,11 +38,11 @@ impl Workspace {
 
     /// Load a Workspace saved at a given filepath
     pub fn from_filepath(filepath: &Path) -> Result<Self, WorkspaceLoadError> {
-        let contents = fs::read_to_string(filepath);
-        if contents.is_err() {
-            return Err(WorkspaceLoadError::BadFileRead);
+        if !filepath.is_file() {
+            return Err(WorkspaceLoadError::DoesNotExist);
         }
-        match serde_json::from_str(&contents.unwrap()) {
+        let contents = fs::read_to_string(filepath).expect("Could not read file contents");
+        match serde_json::from_str(&contents) {
             Ok(x) => Ok(x),
             Err(_) => Err(WorkspaceLoadError::UnexpectedFormat),
         }
@@ -49,9 +51,6 @@ impl Workspace {
     /// Load a Workspace saved as a given name in the workspace folder
     pub fn from_name(name: &str) -> Result<Self, WorkspaceLoadError> {
         let filepath = get_workspace_dir().join(PathBuf::from(name).with_extension("json"));
-        if !filepath.is_file() {
-            return Err(WorkspaceLoadError::DoesNotExist);
-        }
         Workspace::from_filepath(&filepath)
     }
 
@@ -195,7 +194,7 @@ pub fn view_workspace(name: &str, absolute: bool) -> Result<String, String> {
         Err(WorkspaceLoadError::UnexpectedFormat) => {
             return Err(format!("Could not parse the format of workspace '{name}'"))
         }
-        Err(_) => return Err(format!("Workspace '{name}' does not exist")),
+        Err(WorkspaceLoadError::DoesNotExist) => return Err(format!("Workspace '{name}' does not exist")),
     };
 
     // Create a new text, seeding it with the name of the workspace
