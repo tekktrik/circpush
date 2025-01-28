@@ -44,12 +44,12 @@ impl FileLink {
     /// destination paths must be absolute.
     pub fn new(source: &Path, destination: &Path) -> Result<Self, FileLinkCreationError> {
         // If the source path is not an existing file or is not absolute, return an error
-        if !(source.is_file() && source.is_absolute()) {
+        if !source.is_file() || !source.is_absolute() || source.is_symlink() {
             return Err(FileLinkCreationError::InvalidSource);
         }
 
         // If the destination path is not absolute, return an error
-        if !destination.is_absolute() {
+        if !destination.is_absolute() || destination.is_symlink() {
             return Err(FileLinkCreationError::InvalidDestination);
         }
 

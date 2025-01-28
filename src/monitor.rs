@@ -77,7 +77,7 @@ impl FileMonitor {
                 // Iterate through the files matched by the glob pattern, create FileLinks for them, and insert those links into the hash set
                 for read_path in paths
                     .map(|result| result.expect("Could not read all glob matches"))
-                    .filter(|path| path.is_file())
+                    .filter(|path| !path.as_path().is_symlink() && path.as_path().is_file())
                 {
                     let abs_read_path =
                         absolute(&read_path).expect("Unable to create absolute path");
