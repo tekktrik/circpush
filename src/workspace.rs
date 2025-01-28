@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::filetree::get_workspace_dir;
 use crate::monitor::{as_table, FileMonitor};
 
+/// A workspace consisting of a list of file monitors and a description
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Workspace {
     pub desc: String,
@@ -21,9 +22,12 @@ pub enum WorkspaceLoadError {
     DoesNotExist,
 }
 
+/// The ways in which a workspace can fail to save
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WorkspaceSaveError {
+    /// The workspace fails to save to a file
     BadFileSave,
+    /// The desired workspace already exists
     AlreadyExists,
 }
 
@@ -194,7 +198,9 @@ pub fn view_workspace(name: &str, absolute: bool) -> Result<String, String> {
         Err(WorkspaceLoadError::UnexpectedFormat) => {
             return Err(format!("Could not parse the format of workspace '{name}'"))
         }
-        Err(WorkspaceLoadError::DoesNotExist) => return Err(format!("Workspace '{name}' does not exist")),
+        Err(WorkspaceLoadError::DoesNotExist) => {
+            return Err(format!("Workspace '{name}' does not exist"))
+        }
     };
 
     // Create a new text, seeding it with the name of the workspace
@@ -222,12 +228,14 @@ mod test {
 
     use super::*;
 
+    /// Helper function for generating a file monitor
     fn get_monitor() -> FileMonitor {
         let write_directory = TempDir::new().expect("Could not create temporary write directory");
         let base_directory = TempDir::new().expect("Could not create temporary base directory");
         FileMonitor::new("test*", write_directory.path(), base_directory.path())
     }
 
+    /// Helper function for creating a workspace
     fn get_workspace() -> Workspace {
         let monitor = get_monitor();
         let monitors = vec![monitor];
@@ -237,15 +245,23 @@ mod test {
         }
     }
 
+    /// Tests creating a new workspace
     #[test]
     fn new() {
-        let template = get_workspace();
-        let desc = &template.desc;
-        let monitors = &template.monitors;
-        let monitor: Workspace = Workspace::new(desc, monitors);
-        assert_eq!(monitor, template);
-        assert_eq!(monitor.desc, template.desc);
-        assert_eq!(monitor.monitors, template.monitors);
+        // Generate a cookiecutter workspace
+        let template_workspace = get_workspace();
+
+        // Store the information from the cookiecutter workspace
+        let desc = &template_workspace.desc;
+        let monitors = &template_workspace.monitors;
+
+        // Create the workspace using Workspace::new()
+        let workspace: Workspace = Workspace::new(desc, monitors);
+
+        // Check the equality of the workspaces and their fields
+        assert_eq!(workspace, template_workspace);
+        assert_eq!(workspace.desc, template_workspace.desc);
+        assert_eq!(workspace.monitors, template_workspace.monitors);
     }
 
     mod from_filepath {
@@ -254,39 +270,51 @@ mod test {
 
         use super::*;
 
+        /// Tests the successful generation of a workspace from a filepath
         #[test]
         fn success() {
+            // Load the test asset workspace
             let filepath = PathBuf::from("tests/assets/workspaces/testws.json");
             let workspace: Workspace =
                 Workspace::from_filepath(&filepath).expect("Could not get workspace from filepath");
 
+            // Generate the expected contained file monitor
             let write_directory = PathBuf::from("/circpush/tests/assets/sandbox/");
             let base_directory = PathBuf::from("/circpush");
             let monitor = FileMonitor::new("test*", &write_directory, &base_directory);
-            let monitors = vec![monitor];
 
-            assert_eq!(&workspace.desc, "A test workspace");
-            assert_eq!(&workspace.monitors, &monitors);
+            // Generate the expected workspace fields
+            let expected_desc = "A test workspace";
+            let expected_monitors = vec![monitor];
+
+            // Check that the workspace fields matched the expected values
+            assert_eq!(&workspace.desc, expected_desc);
+            assert_eq!(workspace.monitors, expected_monitors);
         }
 
+        /// Tests attempting to get a workspace when the workspace file does not exist
         #[test]
         fn bad_file_read_error() {
             let filepath = PathBuf::from("/does/not/exist");
             let error = Workspace::from_filepath(&filepath)
                 .expect_err("Successfully loaded workspace from filepath");
-            assert_eq!(error, WorkspaceLoadError::BadFileRead);
+            assert_eq!(error, WorkspaceLoadError::DoesNotExist);
         }
 
+        /// Tests attempting to get a workspace from an incorrectly formatted file
         #[test]
         fn unexpected_format_error() {
+            // Create a temporary file to be used as the workspace file
             let mut temp_file =
                 tempfile::NamedTempFile::new().expect("Could not get temporary file");
+
+            // Write data not properly formatted for a workspace file
             temp_file
                 .write(b"junkdata")
                 .expect("Could not write to temporary file");
 
-            let filepath = temp_file.path();
-            let error = Workspace::from_filepath(filepath)
+            // Check that attempt to get a workspace from the file returns an error
+            let error = Workspace::from_filepath(temp_file.path())
                 .expect_err("Successfully loaded workspace from filepath");
             assert_eq!(error, WorkspaceLoadError::UnexpectedFormat);
         }
@@ -296,40 +324,56 @@ mod test {
 
         use super::*;
 
+        /// Tests the successful generation of a workspace from a name
         #[test]
         #[serial_test::serial]
         fn success() {
+            // Save the existing state of the application directory
             let preexisted = crate::test_support::prepare_fresh_state();
 
+            // Store the name of the worskpace
             let filename = "testws";
 
+            // Get the expected workspace filepath for the given name
             let mut workspace_filepath = get_workspace_dir().join(filename);
             workspace_filepath.set_extension("json");
 
+            // Store the filepath of the test asset workspace file
             let test_filepath = PathBuf::from("tests/assets/workspaces/testws.json");
+
+            // Copy the test asset file contents to the expected workspace file
             fs::File::create_new(&workspace_filepath)
                 .expect("Could not create new mock workspace file");
             fs::copy(&test_filepath, &workspace_filepath)
                 .expect("Could not copy the mock workspace file");
 
+            // Check that the workspace can be retrieved by name
             let _workspace: Workspace =
                 Workspace::from_name(&filename).expect("Could not retrieve the workspace");
 
+            // Restore the previous state of the application directory
             crate::test_support::restore_previous_state(preexisted);
         }
 
+        /// Tests that the retrieving a nonexistent workspace causes an error
         #[test]
         #[serial_test::serial]
         fn error() {
+            // Save the existing state of the application directory
             let preexisted = crate::test_support::prepare_fresh_state();
 
+            // Store the name of the worskpace
             let filename = "doesnotexist";
 
+            // Check that the workspace cannot be reireve by name
             let error =
                 Workspace::from_name(&filename).expect_err("Successfully retrieved the workspace");
-            assert_eq!(error, WorkspaceLoadError::DoesNotExist);
 
+            // Restore the previous state of the application directory
             crate::test_support::restore_previous_state(preexisted);
+
+            // Check that the error returned is the correct one
+            assert_eq!(error, WorkspaceLoadError::DoesNotExist);
         }
     }
 
@@ -337,32 +381,48 @@ mod test {
 
         use super::*;
 
+        /// Tests the successful saving of a workspace to a filepath
         #[test]
         fn success() {
+            // Get the filepath of the test asset workspace file to load
             let load_filepath = PathBuf::from("tests/assets/workspaces/testws.json");
+
+            // Load the test asset workspace
             let workspace: Workspace = Workspace::from_filepath(&load_filepath)
                 .expect("Could not get workspace from filepath");
 
+            // Create a temporary directory
             let tempdir = TempDir::new().expect("Could not get temporary directory");
 
+            // Get the save filepath for the workspace
             let save_filepath = tempdir.path().join("testsave");
+
+            // Save the workspace to the save filepath
             workspace
                 .save_as_filepath(&save_filepath)
                 .expect("Could not save the workspace");
 
+            // Load the file contents of the loaded and saved workspace files
             let loaded = fs::read_to_string(&load_filepath)
                 .expect("Could not load contents of test workspace");
             let saved = fs::read_to_string(&save_filepath)
                 .expect("Could not load contents of saved workspace");
 
+            // Check that the file contents of each workspace file match
             assert_eq!(saved.trim(), loaded.trim());
         }
 
+        /// Tests that a bad file save of the workspace causes an error
         #[test]
         fn bad_file_save() {
+            // Create a new workspace
             let workspace: Workspace = Workspace::new("desc", &[]);
 
+            // Store a filepath that does not exist
             let filepath = PathBuf::from("/does/not/exist");
+            assert!(!filepath.as_path().exists());
+            
+            // 
             let error = workspace
                 .save_as_filepath(&filepath)
                 .expect_err("Successfully saved the workspace");
@@ -378,6 +438,7 @@ mod test {
         #[test]
         #[serial_test::serial]
         fn new() {
+            // Save the existing state of the application directory
             let preexisted = crate::test_support::prepare_fresh_state();
 
             let filename = "testws";
@@ -398,6 +459,7 @@ mod test {
             let saved = fs::read_to_string(&save_filepath)
                 .expect("Could not load contents of saved workspace");
 
+            // Restore the previous state of the application directory
             crate::test_support::restore_previous_state(preexisted);
 
             assert_eq!(saved.trim(), loaded.trim());
@@ -406,6 +468,7 @@ mod test {
         #[test]
         #[serial_test::serial]
         fn existing() {
+            // Save the existing state of the application directory
             let preexisted = crate::test_support::prepare_fresh_state();
 
             let filename = "testws";
@@ -429,6 +492,7 @@ mod test {
             let saved = fs::read_to_string(&save_filepath)
                 .expect("Could not load contents of saved workspace");
 
+            // Restore the previous state of the application directory
             crate::test_support::restore_previous_state(preexisted);
 
             assert_eq!(saved.trim(), loaded.trim());
@@ -437,6 +501,7 @@ mod test {
         #[test]
         #[serial_test::serial]
         fn already_exists_error() {
+            // Save the existing state of the application directory
             let preexisted = crate::test_support::prepare_fresh_state();
 
             let filename = "testws";
@@ -455,6 +520,7 @@ mod test {
                 .save_as_name(&filename, false)
                 .expect_err("Successfully saved existing workspace");
 
+            // Restore the previous state of the application directory
             crate::test_support::restore_previous_state(preexisted);
 
             assert_eq!(error, WorkspaceSaveError::AlreadyExists);
@@ -468,6 +534,7 @@ mod test {
         #[test]
         #[serial_test::serial]
         fn list_all() {
+            // Save the existing state of the application directory
             let preexisted = crate::test_support::prepare_fresh_state();
 
             for i in 0..3 {
@@ -482,6 +549,7 @@ mod test {
 
             let response = list_workspaces().expect("Could not get the list of workspaces");
 
+            // Restore the previous state of the application directory
             crate::test_support::restore_previous_state(preexisted);
 
             assert_eq!(&response, expected);
@@ -490,12 +558,14 @@ mod test {
         #[test]
         #[serial_test::serial]
         fn none_saved() {
+            // Save the existing state of the application directory
             let preexisted = crate::test_support::prepare_fresh_state();
 
             let expected = "No workspaces have been saved";
 
             let response = list_workspaces().expect("Could not get the list of workspaces");
 
+            // Restore the previous state of the application directory
             crate::test_support::restore_previous_state(preexisted);
 
             assert_eq!(&response, expected);
@@ -509,6 +579,7 @@ mod test {
         #[test]
         #[serial_test::serial]
         fn success() {
+            // Save the existing state of the application directory
             let preexisted = crate::test_support::prepare_fresh_state();
 
             for i in 0..3 {
@@ -536,6 +607,7 @@ mod test {
             let new_contents =
                 fs::read_to_string(&new_filepath).expect("Could not read file contents");
 
+            // Restore the previous state of the application directory
             crate::test_support::restore_previous_state(preexisted);
 
             assert_eq!(response, expected);
@@ -545,6 +617,7 @@ mod test {
         #[test]
         #[serial_test::serial]
         fn does_not_exist() {
+            // Save the existing state of the application directory
             let preexisted = crate::test_support::prepare_fresh_state();
 
             let name = "doesnotexist";
@@ -554,6 +627,7 @@ mod test {
             let response = rename_workspace(&name, "newname")
                 .expect_err("Successfully renamed nonexistent workspace");
 
+            // Restore the previous state of the application directory
             crate::test_support::restore_previous_state(preexisted);
 
             assert_eq!(response, expected);
@@ -567,6 +641,7 @@ mod test {
         #[test]
         #[serial_test::serial]
         fn success() {
+            // Save the existing state of the application directory
             let preexisted = crate::test_support::prepare_fresh_state();
 
             for i in 0..3 {
@@ -580,8 +655,9 @@ mod test {
             let expected = format!("Deleted workspace '{name}'");
             let response = delete_workspace("test1").expect("Could not delete workspace");
 
-            assert!(!filepath.exists());
+            assert!(!filepath.as_path().exists());
 
+            // Restore the previous state of the application directory
             crate::test_support::restore_previous_state(preexisted);
 
             assert_eq!(expected, response);
@@ -607,6 +683,7 @@ mod test {
         #[test]
         #[serial_test::serial]
         fn success_with_description() {
+            // Save the existing state of the application directory
             let preexisted = crate::test_support::prepare_fresh_state();
 
             let load_filepath = PathBuf::from("tests/assets/workspaces/testws.json");
@@ -629,6 +706,7 @@ mod test {
 
             let response = view_workspace(name, true).expect("Could not view workspace");
 
+            // Restore the previous state of the application directory
             crate::test_support::restore_previous_state(preexisted);
 
             assert_eq!(
@@ -640,6 +718,7 @@ mod test {
         #[test]
         #[serial_test::serial]
         fn success_without_description() {
+            // Save the existing state of the application directory
             let preexisted = crate::test_support::prepare_fresh_state();
 
             let load_filepath = PathBuf::from("tests/assets/workspaces/nodescription.json");
@@ -659,6 +738,7 @@ mod test {
 
             let response = view_workspace(name, true).expect("Could not view workspace");
 
+            // Restore the previous state of the application directory
             crate::test_support::restore_previous_state(preexisted);
 
             assert_eq!(
@@ -670,14 +750,17 @@ mod test {
         #[test]
         #[serial_test::serial]
         fn does_not_exist() {
+            // Save the existing state of the application directory
             let preexisted = crate::test_support::prepare_fresh_state();
 
             let name = "doesnotexist";
 
             let expected = format!("Workspace '{name}' does not exist");
+
             let response =
                 view_workspace(name, true).expect_err("Successfully viewed nonexistent workspace");
 
+            // Restore the previous state of the application directory
             crate::test_support::restore_previous_state(preexisted);
 
             assert_eq!(response, expected);
@@ -686,17 +769,20 @@ mod test {
         #[test]
         #[serial_test::serial]
         fn unexpected_format_error() {
+            // Save the existing state of the application directory
             let preexisted = crate::test_support::prepare_fresh_state();
 
             let name = "badformat";
-            let filepath = Workspace::get_filepath_for_name(&name);
 
+            let filepath = Workspace::get_filepath_for_name(&name);
             fs::File::create_new(&filepath).expect("Could not create new file");
 
             let expected = format!("Could not parse the format of workspace '{name}'");
+
             let response = view_workspace(name, true)
                 .expect_err("Successfully viewed incorrectly formatted workspace");
 
+            // Restore the previous state of the application directory
             crate::test_support::restore_previous_state(preexisted);
 
             assert_eq!(response, expected);

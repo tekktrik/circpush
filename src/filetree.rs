@@ -52,7 +52,7 @@ mod test {
 
         // Get the application directory and check that it exists
         let app_dir = super::get_app_dir();
-        assert!(app_dir.exists());
+        assert!(app_dir.as_path().is_dir());
 
         // Restore the previous state after the test
         crate::test_support::restore_previous_state(preexisted);
@@ -76,7 +76,7 @@ mod test {
 
         // Get the application workspace directory and check that it exists
         let app_dir = super::get_workspace_dir();
-        assert!(app_dir.exists());
+        assert!(app_dir.as_path().is_dir());
 
         // Restore the previous state after the test
         crate::test_support::restore_previous_state(preexisted);

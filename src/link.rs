@@ -65,11 +65,11 @@ impl FileLink {
         Ok(link)
     }
 
-    /// Ensures that the write path directries exist, such that the source file can eventually be
+    /// Ensures that the write path directories exist, such that the source file can eventually be
     /// copied to the required destination
     pub fn ensure_writepath(&self) -> Result<(), FileLinkCreationError> {
         // Skip if the destination already exists
-        if !self.destination.exists() {
+        if !self.destination.as_path().exists() {
             // Check the parent directory of the destination
             let parent_path = self
                 .destination
@@ -87,7 +87,7 @@ impl FileLink {
     /// Checks whether the destination file is outdated
     pub fn is_outdated(&self) -> bool {
         // If the destination file doesn't exist, it's outdated by definition
-        if !self.destination.exists() {
+        if !self.destination.as_path().exists() {
             return true;
         }
 
@@ -343,7 +343,7 @@ mod tests {
 
                 // Set the destination to a nonexistent file and check it doesn't already exist
                 filelink.destination = filelink.destination.join("inner").join("newfile");
-                assert!(!filelink.destination.parent().unwrap().exists());
+                assert!(!filelink.destination.as_path().parent().unwrap().exists());
 
                 // Ensure the write path
                 filelink
@@ -351,7 +351,7 @@ mod tests {
                     .expect("Could not ensure file link destination");
 
                 // Check the write path now exists
-                assert!(filelink.destination.parent().unwrap().exists());
+                assert!(filelink.destination.as_path().parent().unwrap().is_dir());
             }
 
             /// Tests FileLink::ensure_writepath(), where it:
@@ -363,7 +363,7 @@ mod tests {
                 let (filelink, _src, _dst) = create_new_filelink();
 
                 // Check the destination already exists
-                assert!(filelink.destination.exists());
+                assert!(filelink.destination.as_path().is_file());
 
                 // Ensure the write path
                 filelink
@@ -371,7 +371,7 @@ mod tests {
                     .expect("Could not ensure file link destination");
 
                 // Check the write path still exists
-                assert!(filelink.destination.exists());
+                assert!(filelink.destination.as_path().is_file());
             }
 
             /// Tests FileLink::ensure_writepath(), where:
@@ -526,18 +526,18 @@ mod tests {
             let (link, _src, _dst) = create_new_unwritten_filelink();
 
             // Check that the file link destination does not yet exist
-            assert!(!link.destination.exists());
+            assert!(!link.destination.as_path().exists());
 
             // Create a file at the file link destination
             fs::File::create(&link.destination).expect("Could not create new destination file");
-            assert!(link.destination.exists());
+            assert!(link.destination.as_path().is_file());
 
             // Perform a file link deletion
             link.delete()
                 .expect("Could not delete file link destination file");
 
             // Check that the file link's destination file no longer exists
-            assert!(!link.destination.exists());
+            assert!(!link.destination.as_path().exists());
         }
 
         mod trait_tabled {

@@ -183,7 +183,7 @@ impl FileMonitor {
 
     /// Checks whether the write directory exists
     pub fn write_directory_exists(&self) -> bool {
-        self.write_directory.exists()
+        self.write_directory.as_path().is_dir()
     }
 
     /// Get a linkless clone of the current file monitor
@@ -407,15 +407,15 @@ mod tests {
                 fs::write(&read_path, contents).expect("Could not write to the first file");
 
                 // Check that the read file exists and the write file does not exist yet
-                assert!(read_path.exists());
-                assert!(!write_path.exists());
+                assert!(read_path.as_path().is_file());
+                assert!(!write_path.as_path().exists());
 
                 // Update the links
                 monitor.update_links().expect("Unable to update links");
 
                 // Check that the read file still exists and the write file now exists
-                assert!(read_path.exists());
-                assert!(write_path.exists());
+                assert!(read_path.as_path().is_file());
+                assert!(write_path.as_path().is_file());
 
                 // Check that the contents of the updated file written to match the expected contents
                 let updated =
@@ -440,15 +440,15 @@ mod tests {
                 fs::remove_file(&read_path).expect("Could not delete the second test file");
 
                 // Check that neither the read nor write file exists
-                assert!(!read_path.exists());
-                assert!(!write_path.exists());
+                assert!(!read_path.as_path().exists());
+                assert!(!write_path.as_path().exists());
 
                 // Update the links
                 monitor.update_links().expect("Unable to update links");
 
                 // Check that that read and write files still don't exist
-                assert!(!read_path.exists());
-                assert!(!write_path.exists());
+                assert!(!read_path.as_path().exists());
+                assert!(!write_path.as_path().exists());
             }
 
             /// Tests FileMonitor::update_links(), where:
@@ -470,15 +470,15 @@ mod tests {
                     .expect("Could not write to the third test file");
 
                 // Check that the read and write files both exist
-                assert!(read_path.exists());
-                assert!(write_path.exists());
+                assert!(read_path.as_path().is_file());
+                assert!(write_path.as_path().is_file());
 
                 // Update the links
                 monitor.update_links().expect("Unable to update links");
 
                 // Check that the read and write files still exist
-                assert!(read_path.exists());
-                assert!(write_path.exists());
+                assert!(read_path.as_path().is_file());
+                assert!(write_path.as_path().is_file());
 
                 // CHeck that the write file contents have not changed
                 let updated =
@@ -500,15 +500,15 @@ mod tests {
                 let write_path = write_dir.path().join(&filename);
 
                 // Check that only the read file exists
-                assert!(read_path.exists());
-                assert!(!write_path.exists());
+                assert!(read_path.as_path().is_file());
+                assert!(!write_path.as_path().exists());
 
                 // Update the links
                 monitor.update_links().expect("Unable to update links");
 
                 // Check that both the read and write files exist
-                assert!(read_path.exists());
-                assert!(write_path.exists());
+                assert!(read_path.as_path().is_file());
+                assert!(write_path.as_path().is_file());
             }
 
             /// Tests FileMonitor::update_links(), where:
@@ -530,15 +530,15 @@ mod tests {
                     .expect("Could not create and write to the fifth test file");
 
                 // Check that only the read file exists
-                assert!(read_path.exists());
-                assert!(!write_path.exists());
+                assert!(read_path.as_path().is_file());
+                assert!(!write_path.as_path().exists());
 
                 // Update the links
                 monitor.update_links().expect("Unable to update links");
 
                 // Check that both the read and write files exist
-                assert!(read_path.exists());
-                assert!(write_path.exists());
+                assert!(read_path.as_path().is_file());
+                assert!(write_path.as_path().is_file());
 
                 // Check that the contents of the write file match what was written
                 let updated =
@@ -575,15 +575,15 @@ mod tests {
                     .expect("Could not set file modification time");
 
                 // Check that both the read and write files exist
-                assert!(read_path.exists());
-                assert!(write_path.exists());
+                assert!(read_path.as_path().is_file());
+                assert!(write_path.as_path().is_file());
 
                 // Update the links
                 monitor.update_links().expect("Unable to update links");
 
                 // Check that both the read and write files still exist
-                assert!(read_path.exists());
-                assert!(write_path.exists());
+                assert!(read_path.as_path().is_file());
+                assert!(write_path.as_path().is_file());
 
                 // CHeck that the write file contents now match those of the read file
                 let updated =
@@ -621,7 +621,7 @@ mod tests {
                     .expect("Unable to delete file as part of update");
 
                 // Check that the write path no longer exists
-                assert!(!write_path.exists());
+                assert!(!write_path.as_path().exists());
             }
 
             /// Tests FileMonitor::update_links(), where:

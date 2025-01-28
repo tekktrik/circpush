@@ -227,7 +227,7 @@ pub mod test_support {
         let app_directory = crate::filetree::get_app_dir();
         let test_directory = get_test_directory();
 
-        let preexists = app_directory.exists();
+        let preexists = app_directory.as_path().is_dir();
         if preexists {
             let copy_options = fs_extra::dir::CopyOptions::new();
 

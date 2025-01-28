@@ -32,7 +32,7 @@ mod test {
 
         // Get the filename and filepath of the boot_out.txt file
         let filename = "boot_out.txt";
-        let bootout_filepath = mount_point.join(&filename);
+        let bootout_filepath = mount_point.as_path().join(&filename);
 
         // Get the filepath of the boot_out.txt test asset file
         let current_filepath = PathBuf::from(file!());
@@ -49,7 +49,7 @@ mod test {
 
         // Delete the boot_out.txt on the connected mount
         fs::remove_file(&bootout_filepath).expect("Could not delete file");
-        assert!(!bootout_filepath.exists());
+        assert!(!bootout_filepath.as_path().exists());
 
         // Assert that the board is no longer detected
         assert!(find_circuitpy().is_none());
@@ -57,6 +57,6 @@ mod test {
         // Return the boot_out.txt file to the connected mount
         fs::write(&bootout_filepath, &boutout_contents)
             .expect("Could not copy test bootout file after test");
-        assert!(bootout_filepath.exists());
+        assert!(bootout_filepath.as_path().is_file());
     }
 }
