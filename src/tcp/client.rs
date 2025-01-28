@@ -174,7 +174,9 @@ pub fn load_workspace(name: &str) -> Result<String, String> {
         Err(WorkspaceLoadError::UnexpectedFormat) => {
             return Err(format!("Could not parse the format of workspace '{name}'"))
         }
-        Err(WorkspaceLoadError::DoesNotExist) => return Err(format!("Workspace '{name}' does not exist")),
+        Err(WorkspaceLoadError::DoesNotExist) => {
+            return Err(format!("Workspace '{name}' does not exist"))
+        }
     };
 
     // Start the file monitors from the workspace
