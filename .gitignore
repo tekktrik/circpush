@@ -80,3 +80,6 @@ testfs
 
 # Other test files
 tests/assets/temporary
+
+# Coverage files
+target/codecov.json

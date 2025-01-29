@@ -37,8 +37,11 @@ jobs:
           - runner: ubuntu-latest
             target: ppc64le
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: |
             3.9
@@ -46,6 +49,24 @@ jobs:
             3.11
             3.12
             3.13
+      - name: Install cargo llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Prepare tests
+        run: |
+          make test-prep
+      - name: Test code with code coverage
+        run: |
+          make test-codecov
+      - name:
+        run: |
+          make test-clean
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          file: target/codecov.json
+          flags: "linux-${{ matrix.platform.target }}"
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -82,8 +103,10 @@ jobs:
           - runner: ubuntu-latest
             target: armv7
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: |
             3.9
@@ -91,6 +114,24 @@ jobs:
             3.11
             3.12
             3.13
+      - name: Install cargo llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Prepare tests
+        run: |
+          make test-prep
+      - name: Test code with code coverage
+        run: |
+          make test-codecov
+      - name:
+        run: |
+          make test-clean
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          file: target/codecov.json
+          flags: "musllinux-${{ matrix.platform.target }}"
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -123,8 +164,10 @@ jobs:
           - runner: windows-latest
             target: x86
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: |
             3.9
@@ -133,6 +176,24 @@ jobs:
             3.12
             3.13
           architecture: ${{ matrix.platform.target }}
+      - name: Install cargo llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Prepare tests
+        run: |
+          make test-prep
+      - name: Test code with code coverage
+        run: |
+          make test-codecov
+      - name:
+        run: |
+          make test-clean
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          file: target/codecov.json
+          flags: "windows-${{ matrix.platform.target }}"
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -164,8 +225,10 @@ jobs:
           - runner: macos-latest
             target: aarch64
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: |
             3.9
@@ -173,6 +236,24 @@ jobs:
             3.11
             3.12
             3.13
+      - name: Install cargo llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Prepare tests
+        run: |
+          make test-prep
+      - name: Test code with code coverage
+        run: |
+          make test-codecov
+      - name:
+        run: |
+          make test-clean
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          file: target/codecov.json
+          flags: "macos-${{ matrix.platform.target }}"
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:

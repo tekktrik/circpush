@@ -24,9 +24,13 @@ else
 endif
 
 # TODO: This hasn't been tested on Windows
-.PHONY:
-test-run:
+.PHONY: test-run-html
+test-run-html:
 	cargo llvm-cov --html --features test-support --ignore-filename-regex src/lib.rs
+
+.PHONY: test-run-codecov
+test-run-codecov:
+	cargo llvm-cov --codecov --output-path target/codecov.json --features test-support --ignore-filename-regex src/lib.rs
 
 .PHONY: test-clean
 test-clean:
@@ -45,18 +49,28 @@ else
 	@exit 1
 endif
 
+.PHONY: install-dev-reqs
+install-dev-reqs:
+	-@python -m pip install -r requirements-dev.txt
+
 .PHONY: wipe-test-artifacts
-wipe-test-artifacts:
+wipe-test-artifacts: install-dev-reqs
 	-@python scripts/rmdir_test_config.py
 
 .PHONY: check-test-artifacts
-check-test-artifacts:
+check-test-artifacts: install-dev-reqs
 	@python scripts/check_test_artifacts.py
 
 .PHONY: test
 test: check-test-artifacts
 	-@"${MAKE}" test-prep --no-print-directory
-	-@"${MAKE}" test-run --no-print-directory
+	-@"${MAKE}" test-run-html --no-print-directory
+	-@"${MAKE}" test-clean --no-print-directory
+
+.PHONY: test-codecov
+test-codecov: check-test-artifacts
+	-@"${MAKE}" test-prep --no-print-directory
+	-@"${MAKE}" test-run-codecov --no-print-directory
 	-@"${MAKE}" test-clean --no-print-directory
 
 .PHONY: lint
