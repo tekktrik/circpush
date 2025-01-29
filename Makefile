@@ -26,10 +26,6 @@ endif
 # TODO: This hasn't been tested on Windows
 .PHONY:
 test-run:
-	@if command -v pyenv >/dev/null; \
-	then \
-		export LD_LIBRARY_PATH=~/.pyenv/versions/3.13.0/lib; \
-	fi; \
 	cargo llvm-cov --html --features test-support --ignore-filename-regex src/lib.rs
 
 .PHONY: test-clean
