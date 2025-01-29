@@ -80,6 +80,10 @@ pub fn start_monitor(
     write_directory: PathBuf,
     base_directory: PathBuf,
 ) -> Result<String, String> {
+    if write_directory.as_path().is_symlink() || base_directory.as_path().is_symlink() {
+        return Err(String::from("ERROR: Symlinks are not allowed"));
+    }
+
     match communicate(Request::StartLink {
         read_pattern,
         write_directory,
@@ -263,23 +267,71 @@ mod test {
         assert_eq!(&err_msg, expected_err);
     }
 
-    /// Tests that the start monitor function returns an error if the server is not running
-    #[test]
-    #[serial_test::serial]
-    fn start_monitor_error() {
-        // Get the expected error message
-        let resp_msg = "ERROR: Could not start link";
+    mod start_monitor {
 
-        // Get the response of the command
-        let response = start_monitor(
-            String::from("test"),
-            PathBuf::from("test"),
-            PathBuf::from("test"),
-        );
+        use super::*;
 
-        // Check the error response
-        let msg = response.unwrap_err();
-        assert_eq!(&msg, resp_msg);
+        use std::fs;
+        use tempfile::NamedTempFile;
+
+        #[cfg(target_family = "unix")]
+        use std::os::unix::fs::symlink;
+
+        #[cfg(target_family = "windows")]
+        use std::os::windows::fs::symlink_dir as symlink;
+
+        /// Tests attempting to use symlinks for the base and write directory of a file monitor
+        #[test]
+        #[serial_test::serial]
+        fn symlink_use() {
+            // Store the expected response message
+            let resp_msg = "ERROR: Symlinks are not allowed";
+
+            // Store the symbolic and pointed-to filepaths
+            let symbolic = PathBuf::from("tests/assets/temporary");
+            let pointed = PathBuf::from("tests/assets/monitors");
+
+            // Check that the intended symlink does not already exist
+            assert!(!symbolic.as_path().is_symlink());
+
+            // Check that the pointed to directory exists
+            assert!(pointed.as_path().is_dir());
+
+            // Create a symlink to the pointed to directory
+            symlink(&pointed, &symbolic).expect("Could not create a symlink");
+
+            // Check that the symlink now exists
+            assert!(symbolic.as_path().is_symlink());
+
+            // Attempt to start the monitor with symlinks
+            let error = start_monitor(String::from("test*"), symbolic.clone(), symbolic.clone())
+                .expect_err("Successfully started file monitor when it should have been prevented");
+
+            // Remove the symlink
+            fs::remove_file(&symbolic).expect("Could not remove symlink");
+
+            // Check that the returned and expected response messages match
+            assert_eq!(&error, resp_msg);
+        }
+
+        /// Tests that the start monitor function returns an error if the server is not running
+        #[test]
+        #[serial_test::serial]
+        fn server_not_running() {
+            // Get the expected error message
+            let resp_msg = "ERROR: Could not start link";
+
+            // Get the response of the command
+            let response = start_monitor(
+                String::from("test"),
+                PathBuf::from("test"),
+                PathBuf::from("test"),
+            );
+
+            // Check the error response
+            let msg = response.unwrap_err();
+            assert_eq!(&msg, resp_msg);
+        }
     }
 
     /// Tests that the stop monitor function returns an error if the server is not running

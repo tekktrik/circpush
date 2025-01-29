@@ -77,3 +77,6 @@ docs/_build/
 # Mocked mount point
 testmount/
 testfs
+
+# Other test files
+tests/assets/temporary
