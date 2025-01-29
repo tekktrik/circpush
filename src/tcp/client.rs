@@ -272,7 +272,6 @@ mod test {
         use super::*;
 
         use std::fs;
-        use tempfile::NamedTempFile;
 
         #[cfg(target_family = "unix")]
         use std::os::unix::fs::symlink;
