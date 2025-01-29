@@ -203,6 +203,7 @@ fn workspace_subentry(workspace_command: WorkspaceCommand) -> Result<String, Str
     }
 }
 
+/// Functionality provided for helping with testing
 #[cfg(feature = "test-support")]
 pub mod test_support {
 
@@ -213,42 +214,65 @@ pub mod test_support {
         path::{Path, PathBuf},
     };
 
+    /// The test configuration directory name
     pub const TEST_APP_DIRECTORY_NAME: &str = ".circpush-test";
 
+    /// Test helper function for stopping the server
     pub fn stop_server() {
         tcp::client::stop_server().expect("Could not stop server");
     }
 
+    /// Test helper function for getting the test configuration directory filepath
     fn get_test_directory() -> PathBuf {
         crate::filetree::get_app_dir().with_file_name(TEST_APP_DIRECTORY_NAME)
     }
 
+    /// Test helper function for ensuring the existing application directory is saved before
+    /// running tests that would interfere with its existing state.
+    ///
+    /// Returns whether the application directory existed.
+    ///
+    /// Used in combination with restore_app_directory()
     pub fn save_app_directory() -> bool {
+        // Get the applciation and test configuration directories
         let app_directory = crate::filetree::get_app_dir();
         let test_directory = get_test_directory();
 
+        // Check whether the application directory exists
         let preexists = app_directory.as_path().is_dir();
+
+        // If the applciation directory exists, move it into the test application configuration directory
         if preexists {
             let copy_options = fs_extra::dir::CopyOptions::new();
-
             fs::create_dir(&test_directory).expect("Could not create test application directory");
             fs_extra::dir::move_dir(&app_directory, &test_directory, &copy_options)
                 .expect("Could not rename existing application directory");
         }
+
+        // Ensure the application and workspace directories are recreated
         crate::filetree::ensure_app_dir();
         crate::filetree::ensure_workspace_dir();
+
+        // Returns whether the application directory existed before creating the fresh install
         preexists
     }
 
+    /// Test helper function for restoring the prior application directory after running tests
+    /// that would have interfered with its prior state.
+    ///
+    /// Used in combination with save_app_directory()
     pub fn restore_app_directory() {
+        // Get the applciation and test configuration directories
         let app_directory = crate::filetree::get_app_dir();
         let test_directory = get_test_directory();
 
-        let copy_options = fs_extra::dir::CopyOptions::new();
-
+        // Remove the current application directory
         fs::remove_dir_all(crate::filetree::get_app_dir())
             .expect("Could not delete test directory");
 
+        // Move the prior application directory (in the test configuration directory folder)
+        // back to its prior location as the application directory
+        let copy_options = fs_extra::dir::CopyOptions::new();
         fs_extra::dir::move_dir(
             &test_directory.join(env!("CARGO_PKG_NAME")),
             &app_directory.parent().expect("Could not get config folder"),
@@ -256,9 +280,17 @@ pub mod test_support {
         )
         .expect("Could not restore application directory");
 
+        // Remove that test configuration directory
         fs::remove_dir_all(test_directory).expect("Could not delete test application folder");
     }
 
+    /// Test helper function for ensuring the existing application directory is saved before
+    /// running tests that would interfere with its existing state.  It also starts the server
+    /// in another process, essentially creating a "fresh install" state.
+    ///
+    /// Returns whether the application directory existed.
+    ///
+    /// Used in combination with restore_previous_state()
     pub fn prepare_fresh_state() -> bool {
         let preexists = save_app_directory();
         tcp::server::start_server();
@@ -266,6 +298,11 @@ pub mod test_support {
         preexists
     }
 
+    /// Test helper function for restoring the prior application directory after running tests
+    /// that would have interfered with its prior state, depending on whether it needs to be
+    /// restored.  It also stops the server running in another process.
+    ///
+    /// Used in combination with prepare_fresh_state()
     pub fn restore_previous_state(preexisted: bool) {
         stop_server();
         while tcp::client::ping().is_ok() {}
@@ -275,52 +312,69 @@ pub mod test_support {
         }
     }
 
-    pub fn parse_contents(response: &str, has_name_line: bool) -> Vec<Vec<String>> {
+    /// Test helper function for parsing table components out of a response message
+    pub fn parse_contents(response: &str, has_nontable_line: bool) -> Vec<Vec<String>> {
+        // Create a new list for storing table parts for each row
         let mut all_parts = Vec::new();
+
+        // Iterate through the lines of the table
         for (index, line) in response.trim().lines().enumerate() {
+            // Ignore rows that at the table lines
             if line.starts_with("+") {
                 continue;
             }
 
+            // Create a new list for storing the column values for this row
             let mut line_parts = Vec::new();
 
-            if index == 0 && has_name_line {
+            // If the table has a non-table line and it is the first row, immediately add its
+            // contents and move on to the next row of the response
+            if index == 0 && has_nontable_line {
                 line_parts.push(line.to_owned());
                 all_parts.push(line_parts);
                 continue;
             }
 
+            // Add the values for each column to the row list
             for part in line.split("|") {
                 line_parts.push(part.trim().to_string())
             }
 
+            // Ignore the outsides of the table
             let (_first, line_parts) = line_parts
                 .split_first()
                 .expect("Could not remove the first element");
             let (_last, line_parts) = line_parts
                 .split_last()
                 .expect("Could not remove the last element");
+
+            // Add the row of components to the list of all row components
             all_parts.push(line_parts.to_vec());
         }
 
+        // Return the list of all table parts for each row
         all_parts
     }
 
+    /// Test helper function for generating the expected list of table components for all rows of said table
     pub fn generate_expected_parts<B, W>(
         path_components: &[(B, W)],
-        link_num: usize,
-        name_line: Option<&str>,
+        monitor_num: usize,
+        nontable_line: Option<&str>,
     ) -> Vec<Vec<String>>
     where
         B: AsRef<Path>,
         W: AsRef<Path>,
     {
+        // Create a new list for storing table components (per row)
         let mut components = Vec::new();
 
-        if let Some(name_line_str) = name_line {
+        // If a non-table line should be added, add it at the top
+        if let Some(name_line_str) = nontable_line {
             components.push(vec![name_line_str.to_owned()]);
         }
 
+        // Store the expected header list and add it to the list of the whole table
         let header_str = vec![
             "Link #",
             "Read Pattern",
@@ -328,24 +382,31 @@ pub mod test_support {
             "Write Directory",
         ];
         let header = header_str.iter().map(|e| e.to_string()).collect();
-
         components.push(header);
 
+        // Iterate through the pairs of base and write directories provided
         for (index, (base_directory, write_directory)) in path_components.iter().enumerate() {
-            let number_str = if link_num == 0 {
+            // If a specific file monitor was requiested, the loop only iterates once and that value should bec
+            // present in the table
+            let number_str = if monitor_num == 0 {
                 let number = index + 1;
                 number.to_string()
             } else {
-                link_num.to_string()
+                monitor_num.to_string()
             };
 
+            // Create a list of the components for the row, seeding the monitor number and read pattern
             let mut components_str = vec![&number_str, "test*"];
+
+            // Add the base directory to the components for the row
             components_str.push(
                 base_directory
                     .as_ref()
                     .to_str()
                     .expect("Could not convert path to string"),
             );
+
+            // Add the write directory to the components for the row
             components_str.push(
                 write_directory
                     .as_ref()
@@ -353,11 +414,12 @@ pub mod test_support {
                     .expect("Could not convert path to string"),
             );
 
+            // Add the components for the row to the list of components for the table
             let line_components = components_str.iter().map(|e| e.to_string()).collect();
-
             components.push(line_components);
         }
 
+        // Return the list of components for the table
         components
     }
 }
