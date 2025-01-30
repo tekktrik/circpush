@@ -37,10 +37,10 @@ jobs:
       - name: Clean up tests
         run: |
           make test-clean
-      # - name: Upload coverage report to Codecov
-      #   uses: codecov/codecov-action@v3
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-      #     fail_ci_if_error: true
-      #     file: target/codecov.json
-      #     flags: "linux"
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          file: target/codecov.json
+          flags: "linux"
