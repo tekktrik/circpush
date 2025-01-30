@@ -762,13 +762,13 @@ mod tests {
                         .to_string();
                 let expected = vec![read_pattern, base_directory, write_directory];
 
-                // Check that both the generated and calculated table record match
-                assert_eq!(table, expected);
-
                 // Reset the working directory
                 env::set_current_dir(&current_dir)
                     .expect("Could not reset the current directory for the test");
                 assert_eq!(env::current_dir().unwrap(), current_dir);
+
+                // Check that both the generated and calculated table record match
+                assert_eq!(table, expected);
             }
 
             /// Tests getting the file montior as a table record, where:
@@ -801,13 +801,13 @@ mod tests {
                 let write_directory = String::from(".");
                 let expected = vec![read_pattern, base_directory, write_directory];
 
-                // Check that both the generated and calculated table record match
-                assert_eq!(table, expected);
-
                 // Reset the working directory
                 env::set_current_dir(&current_dir)
                     .expect("Could not reset the current directory for the test");
                 assert_eq!(env::current_dir().unwrap(), current_dir);
+
+                // Check that both the generated and calculated table record match
+                assert_eq!(table, expected);
             }
         }
 
