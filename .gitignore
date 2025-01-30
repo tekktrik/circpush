@@ -80,6 +80,8 @@ testfs
 
 # Other test files
 tests/assets/temporary
+tests/assets/tempsrcfile
+tests/assets/tempdestfile
 tests/assets/tempbasedir
 tests/assets/tempwritedir
 
