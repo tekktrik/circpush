@@ -35,7 +35,7 @@ jobs:
           make test-prep
       - name: Test code with code coverage
         run: |
-          make test-codecov
+          make test-run-codecov
       - name: Clean up tests
         run: |
           make test-clean
