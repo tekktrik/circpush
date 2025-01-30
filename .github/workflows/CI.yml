@@ -3,7 +3,7 @@
 #
 #    maturin generate-ci github
 #
-name: CI
+name: Build and publish wheels
 
 on:
   push:
@@ -49,24 +49,6 @@ jobs:
             3.11
             3.12
             3.13
-      - name: Install cargo llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
-      - name: Prepare tests
-        run: |
-          make test-prep
-      - name: Test code with code coverage
-        run: |
-          make test-codecov
-      - name:
-        run: |
-          make test-clean
-      - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
-          file: target/codecov.json
-          flags: "linux-${{ matrix.platform.target }}"
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -114,24 +96,6 @@ jobs:
             3.11
             3.12
             3.13
-      - name: Install cargo llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
-      - name: Prepare tests
-        run: |
-          make test-prep
-      - name: Test code with code coverage
-        run: |
-          make test-codecov
-      - name:
-        run: |
-          make test-clean
-      - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
-          file: target/codecov.json
-          flags: "musllinux-${{ matrix.platform.target }}"
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -176,24 +140,6 @@ jobs:
             3.12
             3.13
           architecture: ${{ matrix.platform.target }}
-      - name: Install cargo llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
-      - name: Prepare tests
-        run: |
-          make test-prep
-      - name: Test code with code coverage
-        run: |
-          make test-codecov
-      - name:
-        run: |
-          make test-clean
-      - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
-          file: target/codecov.json
-          flags: "windows-${{ matrix.platform.target }}"
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -236,24 +182,6 @@ jobs:
             3.11
             3.12
             3.13
-      - name: Install cargo llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
-      - name: Prepare tests
-        run: |
-          make test-prep
-      - name: Test code with code coverage
-        run: |
-          make test-codecov
-      - name:
-        run: |
-          make test-clean
-      - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
-          file: target/codecov.json
-          flags: "macos-${{ matrix.platform.target }}"
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
