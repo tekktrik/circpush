@@ -80,6 +80,8 @@ testfs
 
 # Other test files
 tests/assets/temporary
+tests/assets/tempbasedir
+tests/assets/tempwritedir
 
 # Coverage files
 codecov.json
