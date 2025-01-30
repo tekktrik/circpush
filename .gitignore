@@ -82,4 +82,4 @@ testfs
 tests/assets/temporary
 
 # Coverage files
-target/codecov.json
+codecov.json
