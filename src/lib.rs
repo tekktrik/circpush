@@ -209,6 +209,10 @@ pub mod test_support {
 
     use super::*;
 
+    use std::thread;
+
+    use crate::tcp::server;
+
     use std::{
         fs,
         path::{Path, PathBuf},
@@ -217,9 +221,18 @@ pub mod test_support {
     /// The test configuration directory name
     pub const TEST_APP_DIRECTORY_NAME: &str = ".circpush-test";
 
+    /// Test helper function for starting the server
+    pub fn start_server() {
+        thread::spawn(|| {
+            let _resp = server::run_server();
+        });
+        while tcp::client::ping().is_err() {}
+    }
+
     /// Test helper function for stopping the server
     pub fn stop_server() {
         tcp::client::stop_server().expect("Could not stop server");
+        while tcp::client::ping().is_ok() {}
     }
 
     /// Test helper function for getting the test configuration directory filepath
@@ -293,7 +306,7 @@ pub mod test_support {
     /// Used in combination with restore_previous_state()
     pub fn prepare_fresh_state() -> bool {
         let preexists = save_app_directory();
-        tcp::server::start_server();
+        start_server();
         while tcp::client::ping().is_err() {}
         preexists
     }
@@ -305,8 +318,6 @@ pub mod test_support {
     /// Used in combination with prepare_fresh_state()
     pub fn restore_previous_state(preexisted: bool) {
         stop_server();
-        while tcp::client::ping().is_ok() {}
-
         if preexisted {
             restore_app_directory();
         }
