@@ -747,6 +747,7 @@ mod tests {
                 // Set the working directory to the base directory of the file monitor
                 env::set_current_dir(&monitor.base_directory)
                     .expect("Could not set the current directory for the test");
+                assert_eq!(env::current_dir().unwrap(), monitor.base_directory);
 
                 // Get the file monitor as a table record
                 let table = monitor.to_table_record(false);
@@ -786,6 +787,7 @@ mod tests {
                 // Set the working directory to the base directory of the file monitor
                 env::set_current_dir(&monitor.write_directory)
                     .expect("Could not set the current directory for the test");
+                assert_eq!(env::current_dir().unwrap(), monitor.write_directory);
 
                 // Get the file monitor as a table record
                 let table = monitor.to_table_record(false);
