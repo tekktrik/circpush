@@ -749,7 +749,8 @@ mod tests {
                 // Change the base directory to a non-random folder (impacts tests on Mac)
                 let tempdir = PathBuf::from("tests/assets/tempbasedir");
                 fs::create_dir_all(&tempdir).expect("Could not create directory");
-                monitor.base_directory = path::absolute(&tempdir).expect("Could not get absolute path");
+                monitor.base_directory =
+                    path::absolute(&tempdir).expect("Could not get absolute path");
 
                 // Set the working directory to the base directory of the file monitor
                 env::set_current_dir(&monitor.base_directory)
@@ -797,7 +798,8 @@ mod tests {
                 // Change the write directory to a non-random folder (impacts tests on Mac)
                 let tempdir = PathBuf::from("tests/assets/tempwritedir");
                 fs::create_dir_all(&tempdir).expect("Could not create directory");
-                monitor.write_directory = path::absolute(&tempdir).expect("Could not get absolute path");
+                monitor.write_directory =
+                    path::absolute(&tempdir).expect("Could not get absolute path");
 
                 // Set the working directory to the base directory of the file monitor
                 env::set_current_dir(&monitor.write_directory)
