@@ -1,0 +1,39 @@
+name: Run tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: |
+            3.13
+      - name: Install cargo llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Prepare tests
+        run: |
+          make test-prep
+      - name: Test code with code coverage
+        run: |
+          make test-codecov
+      - name:
+        run: |
+          make test-clean
+      # - name: Upload coverage report to Codecov
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     fail_ci_if_error: true
+      #     file: target/codecov.json
+      #     flags: "linux"
