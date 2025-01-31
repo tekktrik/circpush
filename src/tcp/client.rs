@@ -272,14 +272,14 @@ mod test {
         use super::*;
 
         #[cfg(target_family = "unix")]
-        use std::os::unix::fs::symlink;
+        use std::fs::remove_file as remove_symlink;
         #[cfg(target_family = "unix")]
-	    use std::fs::remove_file as remove_symlink;
+        use std::os::unix::fs::symlink;
 
         #[cfg(target_family = "windows")]
-        use std::os::windows::fs::symlink_dir as symlink;
-        #[cfg(target_family = "windows")]
         use std::fs::remove_dir as remove_symlink;
+        #[cfg(target_family = "windows")]
+        use std::os::windows::fs::symlink_dir as symlink;
 
         /// Tests attempting to use symlinks for the base and write directory of a file monitor
         #[test]

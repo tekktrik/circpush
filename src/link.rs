@@ -330,7 +330,6 @@ mod tests {
                 let destfile = absolute(dest).expect("Could not get destination as absolute path");
                 fs::File::create(&destfile).expect("Could not create temporary file");
 
-
                 // Get the relative filepath to a temporary destination file
                 let destination = pathdiff::diff_paths(destfile, &current_dir)
                     .expect("Could not get relative path for destination file");
