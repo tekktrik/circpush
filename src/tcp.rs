@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Alec Delaney
+// SPDX-License-Identifier: MIT
+
 pub mod client;
 pub mod server;
 

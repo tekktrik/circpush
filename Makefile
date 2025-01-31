@@ -1,5 +1,4 @@
-# SPDX-FileCopyrightText: 2024 Alec Delaney
-#
+# SPDX-FileCopyrightText: 2025 Alec Delaney
 # SPDX-License-Identifier: MIT
 
 .PHONY: test-prep
@@ -87,5 +86,9 @@ lint:
 fmt:
 	cargo fmt
 
+.PHONY: reuse
+reuse:
+	reuse lint
+
 .PHONY: prepare
-prepare: clippy fmt test
+prepare: reuse clippy fmt test

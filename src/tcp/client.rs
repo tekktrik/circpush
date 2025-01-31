@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Alec Delaney
+// SPDX-License-Identifier: MIT
+
 use crate::commands::{Request, Response, STOP_RESPONSE};
 use crate::monitor::{as_table, FileMonitor};
 use crate::tcp::server::PORT;

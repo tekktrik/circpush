@@ -1,5 +1,4 @@
 # SPDX-FileCopyrightText: 2025 Alec Delaney
-#
 # SPDX-License-Identifier: MIT
 
 """Cross-platform script for getting the application configuration directory

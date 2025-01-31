@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Alec Delaney
+// SPDX-License-Identifier: MIT
+
 use filetime::{set_file_mtime, FileTime};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;

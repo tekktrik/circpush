@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Alec Delaney
+// SPDX-License-Identifier: MIT
+
 use crate::link::FileLink;
 use glob::glob;
 use pathdiff::diff_paths;
