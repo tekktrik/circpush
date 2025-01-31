@@ -59,11 +59,11 @@ install-dev-reqs:
 	-@python -m pip install -r requirements-dev.txt
 
 .PHONY: wipe-test-artifacts
-wipe-test-artifacts: install-dev-reqs
+wipe-test-artifacts:
 	-@python scripts/rmdir_test_config.py
 
 .PHONY: check-test-artifacts
-check-test-artifacts: install-dev-reqs
+check-test-artifacts:
 	@python scripts/check_test_artifacts.py
 
 .PHONY: test
