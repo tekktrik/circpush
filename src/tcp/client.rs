@@ -274,7 +274,7 @@ mod test {
         #[cfg(target_family = "unix")]
         use std::os::unix::fs::symlink;
         #[cfg(target_family = "unix")]
-	use std::fs::remove_file as remove_symlink;
+	    use std::fs::remove_file as remove_symlink;
 
         #[cfg(target_family = "windows")]
         use std::os::windows::fs::symlink_dir as symlink;
