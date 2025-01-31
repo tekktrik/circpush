@@ -122,10 +122,7 @@ fn get_monitor_list(number: usize) -> Result<Vec<FileMonitor>, String> {
 
 /// Send a view file monitor request to the server
 pub fn view_monitor(number: usize, absolute: bool) -> Result<String, String> {
-    let monitor_list = match get_monitor_list(number) {
-        Ok(file_monitors) => file_monitors,
-        Err(error) => return Err(error),
-    };
+    let monitor_list = get_monitor_list(number)?;
 
     let table = as_table(&monitor_list, number, absolute);
     Ok(table.to_string())
@@ -134,10 +131,7 @@ pub fn view_monitor(number: usize, absolute: bool) -> Result<String, String> {
 /// Send a save file monitors request to the server
 pub fn save_workspace(name: &str, desc: &str, force: bool) -> Result<String, String> {
     // Get the response of the server communication
-    let monitor_list = match get_monitor_list(0) {
-        Ok(file_monitors) => file_monitors,
-        Err(error) => return Err(error),
-    };
+    let monitor_list = get_monitor_list(0)?;
 
     // If there are no file monitors, return an error
     if monitor_list.is_empty() {
