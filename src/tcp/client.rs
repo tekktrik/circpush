@@ -271,8 +271,6 @@ mod test {
 
         use super::*;
 
-        use std::fs;
-
         #[cfg(target_family = "unix")]
         use std::os::unix::fs::symlink;
         #[cfg(target_family = "unix")]

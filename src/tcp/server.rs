@@ -4,10 +4,13 @@ use serde::Deserialize;
 use std::io::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::ops::Index;
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::str::FromStr;
 use std::thread::sleep;
 use std::time::Duration;
+
+#[cfg(target_family = "unix")]
+use std::process::Stdio;
 
 /// Default port on which to start the server
 pub const PORT: u16 = 61553;
