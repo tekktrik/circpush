@@ -275,9 +275,13 @@ mod test {
 
         #[cfg(target_family = "unix")]
         use std::os::unix::fs::symlink;
+        #[cfg(target_family = "unix")]
+	use std::fs::remove_file as remove_symlink;
 
         #[cfg(target_family = "windows")]
         use std::os::windows::fs::symlink_dir as symlink;
+        #[cfg(target_family = "windows")]
+        use std::fs::remove_dir as remove_symlink;
 
         /// Tests attempting to use symlinks for the base and write directory of a file monitor
         #[test]
@@ -307,7 +311,7 @@ mod test {
                 .expect_err("Successfully started file monitor when it should have been prevented");
 
             // Remove the symlink
-            fs::remove_file(&symbolic).expect("Could not remove symlink");
+            remove_symlink(&symbolic).expect("Could not remove symlink");
 
             // Check that the returned and expected response messages match
             assert_eq!(&error, resp_msg);
