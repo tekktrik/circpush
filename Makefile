@@ -80,7 +80,7 @@ test-codecov: check-test-artifacts
 
 .PHONY: lint
 lint:
-	cargo clippy
+	cargo clippy -- --deny warnings
 
 .PHONY: fmt
 fmt:
