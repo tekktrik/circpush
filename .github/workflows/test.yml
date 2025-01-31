@@ -34,6 +34,9 @@ jobs:
       - name: Check REUSE compliance
         run: |
           make reuse
+      - name: Run linter
+        run: |
+          make lint
       - name: Install cargo llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Prepare tests
