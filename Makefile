@@ -91,4 +91,4 @@ reuse:
 	reuse lint
 
 .PHONY: prepare
-prepare: reuse clippy fmt test
+prepare: reuse fmt lint test
