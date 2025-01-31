@@ -9,7 +9,7 @@ ifeq ($(GITHUB_ACTIONS), "true")
 	-@xcopy tests\assets\boot_out.txt testmount
 	-@subst T: testmount
 else
-	-xcopy tests\assets\boot_out.txt D:
+	-xcopy tests\assets\boot_out.txt C:
 endif
 else ifeq "$(shell uname -s)" "Linux"
 	-@truncate testfs -s 1M
