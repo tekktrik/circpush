@@ -54,8 +54,8 @@ else
 	@exit 1
 endif
 
-.PHONY: install-dev-reqs
-install-dev-reqs:
+.PHONY: install-dev-deps
+install-dev-deps:
 	-@python -m pip install -r requirements-dev.txt
 
 .PHONY: wipe-test-artifacts
