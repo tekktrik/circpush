@@ -37,9 +37,9 @@ jobs:
       - name: Check REUSE compliance
         run: |
           make reuse
-      - name: Run formatter
+      - name: Check formatting
         run: |
-          make fmt
+          make fmt-check
       - name: Run linter
         run: |
           make lint

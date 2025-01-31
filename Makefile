@@ -87,6 +87,10 @@ lint:
 fmt:
 	cargo fmt
 
+.PHONY: fmt-check
+fmt-check:
+	cargo fmt --check
+
 .PHONY: reuse
 reuse:
 	reuse lint
