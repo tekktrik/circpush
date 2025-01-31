@@ -31,6 +31,9 @@ jobs:
         with:
           python-version: |
             3.13
+      - name: Install development requirements
+        run: |
+          make install-dev-deps
       - name: Check REUSE compliance
         run: |
           make reuse
