@@ -5,9 +5,13 @@
 .PHONY: test-prep
 test-prep:
 ifeq "$(OS)" "Windows_NT"
+ifeq ($(GITHUB_ACTIONS), "true")
 	-@mkdir testmount
 	-@xcopy tests\assets\boot_out.txt testmount
 	-@subst T: testmount
+else
+	-xcopy tests\assets\boot_out.txt C:
+endif
 else ifeq "$(shell uname -s)" "Linux"
 	-@truncate testfs -s 1M
 	-@mkfs.vfat -F12 -S512 testfs
@@ -35,8 +39,10 @@ test-run-codecov:
 .PHONY: test-clean
 test-clean:
 ifeq "$(OS)" "Windows_NT"
+ifneq ($(GITHUB_ACTIONS), "true")
 	-@subst T: /d
 	-@python scripts\rmdir.py testmount
+endif
 else ifeq "$(shell uname -s)" "Linux"
 	-@sudo umount testmount
 	-@sudo rm -rf testmount
