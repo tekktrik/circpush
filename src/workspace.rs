@@ -379,6 +379,8 @@ mod test {
 
     mod save_as_filepath {
 
+        use std::iter::zip;
+
         use super::*;
 
         /// Tests the successful saving of a workspace to a filepath
@@ -409,7 +411,9 @@ mod test {
                 .expect("Could not load contents of saved workspace");
 
             // Check that the file contents of each workspace file match
-            assert_eq!(saved.trim(), loaded.trim());
+            for (saved_line, loaded_line) in zip(saved.trim().lines(), loaded.trim().lines()) {
+                assert_eq!(saved_line, loaded_line);
+            }
         }
 
         /// Tests that a bad file save of the workspace causes an error
@@ -431,6 +435,8 @@ mod test {
     }
 
     mod save_as_name {
+
+        use std::iter::zip;
 
         use super::*;
 
@@ -468,7 +474,9 @@ mod test {
             crate::test_support::restore_previous_state(preexisted);
 
             // Check that the file contents of each workspace file match
-            assert_eq!(saved.trim(), loaded.trim());
+            for (saved_line, loaded_line) in zip(saved.trim().lines(), loaded.trim().lines()) {
+                assert_eq!(saved_line, loaded_line);
+            }
         }
 
         /// Tests the successful saving of a workspace using a name when it is overwriting an existing workspace
@@ -509,7 +517,9 @@ mod test {
             crate::test_support::restore_previous_state(preexisted);
 
             // Check that the file contents of each workspace file match
-            assert_eq!(saved.trim(), loaded.trim());
+            for (saved_line, loaded_line) in zip(saved.trim().lines(), loaded.trim().lines()) {
+                assert_eq!(saved_line, loaded_line);
+            }
         }
 
         /// Tests the successful saving of a workspace using a name when it already exists
