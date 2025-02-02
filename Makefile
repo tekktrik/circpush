@@ -5,7 +5,7 @@
 test-prep:
 	
 ifeq "$(OS)" "Windows_NT"
-ifeq ($(CI), true)
+ifeq "$(CI)" "true"
 	xcopy tests\assets\boot_out.txt C:
 else
 	mkdir testmount
@@ -39,7 +39,7 @@ test-run-codecov:
 .PHONY: test-clean
 test-clean:
 ifeq "$(OS)" "Windows_NT"
-ifneq ($(CI), true)
+ifneq "$(CI)" "true"
 	subst T: /d
 	python scripts\rmdir.py testmount
 endif
