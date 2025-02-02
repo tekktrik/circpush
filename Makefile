@@ -39,7 +39,7 @@ test-run-codecov:
 .PHONY: test-clean
 test-clean:
 ifeq "$(OS)" "Windows_NT"
-ifneq ($(GITHUB_ACTIONS), "true")
+ifneq ($(CI), true)
 	subst T: /d
 	python scripts\rmdir.py testmount
 endif
