@@ -49,7 +49,7 @@ else ifeq "$(shell uname -s)" "Linux"
 	rm testfs -f
 else ifeq "$(shell uname -s)" "Darwin"
 	hdiutil detach /Volumes/TESTMOUNT
-	rm testfs.dmg -f
+	rm -f testfs.dmg
 else
 	@echo "Current OS not supported"
 	@exit 1
