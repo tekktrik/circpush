@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Alec Delaney
+// SPDX-License-Identifier: MIT
+
 use crate::link::FileLink;
 use glob::glob;
 use pathdiff::diff_paths;
@@ -678,6 +681,8 @@ mod tests {
 
         mod to_table_record {
 
+            use std::path;
+
             use super::*;
 
             /// Tests getting the file montior as a table record, where:
@@ -739,14 +744,21 @@ mod tests {
             #[serial_test::serial]
             fn relative_to_base() {
                 // Generate a file monitor
-                let (monitor, _read_dir, _write_dir) = get_monitor();
+                let (mut monitor, _read_dir, _write_dir) = get_monitor();
 
                 // Store the current working directory path
                 let current_dir = env::current_dir().expect("Could not get the current directory");
 
+                // Change the base directory to a non-random folder (impacts tests on Mac)
+                let tempdir = PathBuf::from("tests/assets/tempbasedir");
+                fs::create_dir_all(&tempdir).expect("Could not create directory");
+                monitor.base_directory =
+                    path::absolute(&tempdir).expect("Could not get absolute path");
+
                 // Set the working directory to the base directory of the file monitor
                 env::set_current_dir(&monitor.base_directory)
                     .expect("Could not set the current directory for the test");
+                assert_eq!(env::current_dir().unwrap(), monitor.base_directory);
 
                 // Get the file monitor as a table record
                 let table = monitor.to_table_record(false);
@@ -762,13 +774,16 @@ mod tests {
                         .to_string();
                 let expected = vec![read_pattern, base_directory, write_directory];
 
-                // Check that both the generated and calculated table record match
-                assert_eq!(table, expected);
-
                 // Reset the working directory
                 env::set_current_dir(&current_dir)
                     .expect("Could not reset the current directory for the test");
                 assert_eq!(env::current_dir().unwrap(), current_dir);
+
+                // Delete the non-random folder used for this test
+                fs::remove_dir(&tempdir).expect("Could not remove the folder");
+
+                // Check that both the generated and calculated table record match
+                assert_eq!(table, expected);
             }
 
             /// Tests getting the file montior as a table record, where:
@@ -778,14 +793,21 @@ mod tests {
             #[serial_test::serial]
             fn relative_to_write() {
                 // Generate a file montior
-                let (monitor, _read_dir, _write_dir) = get_monitor();
+                let (mut monitor, _read_dir, _write_dir) = get_monitor();
 
                 // Store the current working directory path
                 let current_dir = env::current_dir().expect("Could not get the current directory");
 
+                // Change the write directory to a non-random folder (impacts tests on Mac)
+                let tempdir = PathBuf::from("tests/assets/tempwritedir");
+                fs::create_dir_all(&tempdir).expect("Could not create directory");
+                monitor.write_directory =
+                    path::absolute(&tempdir).expect("Could not get absolute path");
+
                 // Set the working directory to the base directory of the file monitor
                 env::set_current_dir(&monitor.write_directory)
                     .expect("Could not set the current directory for the test");
+                assert_eq!(env::current_dir().unwrap(), monitor.write_directory);
 
                 // Get the file monitor as a table record
                 let table = monitor.to_table_record(false);
@@ -801,13 +823,16 @@ mod tests {
                 let write_directory = String::from(".");
                 let expected = vec![read_pattern, base_directory, write_directory];
 
-                // Check that both the generated and calculated table record match
-                assert_eq!(table, expected);
-
                 // Reset the working directory
                 env::set_current_dir(&current_dir)
                     .expect("Could not reset the current directory for the test");
                 assert_eq!(env::current_dir().unwrap(), current_dir);
+
+                // Delete the non-random folder used for this test
+                fs::remove_dir(&tempdir).expect("Could not remove the folder");
+
+                // Check that both the generated and calculated table record match
+                assert_eq!(table, expected);
             }
         }
 

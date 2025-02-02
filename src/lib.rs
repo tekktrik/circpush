@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Alec Delaney
+// SPDX-License-Identifier: MIT
+
 mod board;
 mod commands;
 mod filetree;
@@ -51,7 +54,7 @@ pub mod circpush {
     }
 }
 
-/// Main CLI entry struct
+/// Push files to a connected CircuitPython board as they are updated locally
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -62,32 +65,43 @@ struct Cli {
 /// Main CLI command options
 #[derive(Subcommand)]
 enum Command {
+    /// Server-specific commands (e.g., start and stop)
     #[command(subcommand)]
     Server(ServerCommand),
+    /// Ping the server
     Ping,
-    Echo {
-        text: String,
-    },
+    /// Echo a message to the server
+    Echo { text: String },
+    /// Start a file monitor for a given filename or glob pattern
     #[command(name = "start")]
     LinkStart {
+        /// The filename or glob pattern to monitor
         read_pattern: String,
+        /// Use a given path as the write location instead of the connected CircuitPython board
         #[arg(short, long, value_name = "PATH")]
         path: Option<PathBuf>,
     },
+    /// Stop a file monitor
     #[command(name = "stop")]
     LinkStop {
+        /// The file monitor number
         #[arg(default_value_t = 0)]
         number: usize,
     },
+    /// View the details of a file monitor
     #[command(name = "view")]
     LinkView {
+        /// The file monitor number
         #[arg(default_value_t = 0)]
         number: usize,
+        /// Display the filepaths as absolute
         #[arg(short, long)]
         absolute: bool,
     },
+    /// View all currently monitored files
     #[command(name = "ledger")]
     LinkLedger,
+    /// Workspace-specific commands (e.g., save and load)
     #[command(subcommand)]
     Workspace(WorkspaceCommand),
 }
@@ -95,35 +109,55 @@ enum Command {
 /// Server command sub-command options
 #[derive(Subcommand)]
 enum ServerCommand {
+    /// Run the server in the current process
     Run,
+    /// Start the server in a new process
     Start,
+    /// Stop the server
     Stop,
 }
 
+/// FDSNJKFDSNJ
 #[derive(Subcommand)]
 enum WorkspaceCommand {
+    /// Save the current set of file monitors as a workspace
     Save {
+        /// The name of the workspace
         name: String,
         #[arg(short, long)]
+        /// A description of the workspace
         description: Option<String>,
+        /// Overwrite any existing workspace of the same name
         #[arg(short, long, default_value_t = false)]
         force: bool,
     },
+    /// Load a saved workspace
     Load {
+        /// The name of the workspace
         name: String,
     },
+    /// List all saved workspaces
     List,
+    /// View information about a given workspace
     View {
+        /// The name of the workspace
         name: String,
+        /// Display the filepaths as absolute
         #[arg(short, long)]
         absolute: bool,
     },
+    /// See information about the current workspace
     Current,
+    /// Delete a saved workspace
     Delete {
+        // The name of the workspace
         name: String,
     },
+    /// Rename a saved workspace
     Rename {
+        /// The current name of the workspace
         orig: String,
+        /// The new name of the workspace
         new: String,
     },
 }
@@ -209,6 +243,10 @@ pub mod test_support {
 
     use super::*;
 
+    use std::thread;
+
+    use crate::tcp::server;
+
     use std::{
         fs,
         path::{Path, PathBuf},
@@ -217,9 +255,18 @@ pub mod test_support {
     /// The test configuration directory name
     pub const TEST_APP_DIRECTORY_NAME: &str = ".circpush-test";
 
+    /// Test helper function for starting the server
+    pub fn start_server() {
+        thread::spawn(|| {
+            let _resp = server::run_server();
+        });
+        while tcp::client::ping().is_err() {}
+    }
+
     /// Test helper function for stopping the server
     pub fn stop_server() {
         tcp::client::stop_server().expect("Could not stop server");
+        while tcp::client::ping().is_ok() {}
     }
 
     /// Test helper function for getting the test configuration directory filepath
@@ -293,7 +340,7 @@ pub mod test_support {
     /// Used in combination with restore_previous_state()
     pub fn prepare_fresh_state() -> bool {
         let preexists = save_app_directory();
-        tcp::server::start_server();
+        start_server();
         while tcp::client::ping().is_err() {}
         preexists
     }
@@ -305,8 +352,6 @@ pub mod test_support {
     /// Used in combination with prepare_fresh_state()
     pub fn restore_previous_state(preexisted: bool) {
         stop_server();
-        while tcp::client::ping().is_ok() {}
-
         if preexisted {
             restore_app_directory();
         }

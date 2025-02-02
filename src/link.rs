@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Alec Delaney
+// SPDX-License-Identifier: MIT
+
 use filetime::{set_file_mtime, FileTime};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -283,10 +286,15 @@ mod tests {
                 // Get the filepath to the current directory
                 let current_dir = current_dir().expect("Could not get current directory");
 
+                // Create a temporary file to use as the source
+                let src = PathBuf::from("tests/assets/tempsrcfile");
+                let srcfile = absolute(src).expect("Could not get source as absolute path");
+                fs::File::create(&srcfile).expect("Could not create temporary file");
+
                 // Get the relative filepath to a temporary source file
-                let srcfile = NamedTempFile::new().expect("Could not create temporary file");
-                let source = pathdiff::diff_paths(&srcfile.path(), &current_dir)
+                let source = pathdiff::diff_paths(&srcfile, &current_dir)
                     .expect("Could not get relative path for source file");
+                assert!(!source.is_absolute());
 
                 // Get the absolute filepath to a temporary destination file
                 let destfile =
@@ -298,6 +306,11 @@ mod tests {
                 let error = FileLink::new(&source, &destination).expect_err(
                     "Successfully created the file link when it should have been prevented",
                 );
+
+                // Remove the temporary source file
+                fs::remove_file(&source).expect("Could not remove temporary source file");
+
+                // Check that the correct error is returned
                 assert_eq!(error, FileLinkCreationError::InvalidSource);
             }
 
@@ -315,16 +328,25 @@ mod tests {
                 let source =
                     absolute(srcfile.path()).expect("Could not get absolute path of source");
 
+                // Create a temporary file to use as the destination
+                let dest = PathBuf::from("tests/assets/tempdestfile");
+                let destfile = absolute(dest).expect("Could not get destination as absolute path");
+                fs::File::create(&destfile).expect("Could not create temporary file");
+
                 // Get the relative filepath to a temporary destination file
-                let destfile =
-                    NamedTempFile::new().expect("Could not open a temporary destination file");
-                let destination = pathdiff::diff_paths(destfile.path(), &current_dir)
+                let destination = pathdiff::diff_paths(destfile, &current_dir)
                     .expect("Could not get relative path for destination file");
+                assert!(!destination.is_absolute());
 
                 // Check that an error is returned when creating a file link
                 let error = FileLink::new(&source, &destination).expect_err(
                     "Successfully created the file link when it should have been prevented",
                 );
+
+                // Remove the temporary destination file
+                fs::remove_file(&source).expect("Could not remove temporary source file");
+
+                // Check that the correct error is returned
                 assert_eq!(error, FileLinkCreationError::InvalidDestination);
             }
         }

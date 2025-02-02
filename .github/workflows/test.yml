@@ -1,0 +1,63 @@
+# SPDX-FileCopyrightText: 2025 Alec Delaney
+# SPDX-License-Identifier: MIT
+
+name: Run tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testing:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: |
+            3.13
+      - name: Install development requirements
+        run: |
+          make install-dev-deps
+      - name: Check REUSE compliance
+        run: |
+          make reuse
+      - name: Check formatting
+        run: |
+          make fmt-check
+      - name: Run linter
+        run: |
+          make lint
+      - name: Install cargo llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Prepare tests
+        run: |
+          make test-prep
+      - name: Test code with code coverage
+        run: |
+          make test-run-codecov
+      - name: Clean up tests
+        run: |
+          make test-clean
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          file: codecov.json
+          flags: ${{ matrix.os }}

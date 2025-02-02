@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Alec Delaney
+# SPDX-License-Identifier: MIT
+
+# Target directory
 /target
 
 # Byte-compiled / optimized / DLL files
@@ -80,6 +84,10 @@ testfs
 
 # Other test files
 tests/assets/temporary
+tests/assets/tempsrcfile
+tests/assets/tempdestfile
+tests/assets/tempbasedir
+tests/assets/tempwritedir
 
 # Coverage files
-target/codecov.json
+codecov.json

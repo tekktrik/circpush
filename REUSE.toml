@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2025 Alec Delaney
+# SPDX-License-Identifier: MIT
+
+version = 1
+SPDX-PackageName = "circpush"
+SPDX-PackageSupplier = "Alec Delaney <tekktrik@gmail.com>"
+SPDX-PackageDownloadLocation = "https://github.com/tekktrik/circpush"
+
+[[annotations]]
+path = "tests/assets/monitors/**.json"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2025 Alec Delaney"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "tests/assets/workspaces/**.json"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2025 Alec Delaney"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "tests/assets/boot_out.txt"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2025 Scott Shawcroft, for Adafruit Industries"
+SPDX-License-Identifier = "MIT"
