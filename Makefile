@@ -46,7 +46,7 @@ endif
 else ifeq "$(shell uname -s)" "Linux"
 	sudo umount testmount
 	sudo rm -rf testmount
-	rm testfs -f
+	rm -f testfs
 else ifeq "$(shell uname -s)" "Darwin"
 	hdiutil detach /Volumes/TESTMOUNT
 	rm -f testfs.dmg
