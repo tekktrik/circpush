@@ -3,24 +3,25 @@
 
 .PHONY: test-prep
 test-prep:
+	
 ifeq "$(OS)" "Windows_NT"
-ifeq ($(GITHUB_ACTIONS), "true")
-	-@mkdir testmount
-	-@xcopy tests\assets\boot_out.txt testmount
-	-@subst T: testmount
+ifeq ($(CI), true)
+	xcopy tests\assets\boot_out.txt C:
 else
-	-xcopy tests\assets\boot_out.txt C:
+	mkdir testmount
+	xcopy tests\assets\boot_out.txt testmount
+	subst T: testmount
 endif
 else ifeq "$(shell uname -s)" "Linux"
-	-@truncate testfs -s 1M
-	-@mkfs.vfat -F12 -S512 testfs
-	-@mkdir testmount
-	-@sudo mount -o loop,user,umask=000 testfs testmount/
-	-@cp tests/assets/boot_out.txt testmount/
+	truncate testfs -s 1M
+	mkfs.vfat -F12 -S512 testfs
+	mkdir testmount
+	sudo mount -o loop,user,umask=000 testfs testmount/
+	cp tests/assets/boot_out.txt testmount/
 else ifeq "$(shell uname -s)" "Darwin"
-	-@hdiutil create -size 512m -volname TESTMOUNT -fs FAT32 testfs.dmg
-	-@hdiutil attach testfs.dmg
-	-@cp tests/assets/boot_out.txt /Volumes/TESTMOUNT
+	hdiutil create -size 512m -volname TESTMOUNT -fs FAT32 testfs.dmg
+	hdiutil attach testfs.dmg
+	cp tests/assets/boot_out.txt /Volumes/TESTMOUNT
 else
 	@echo "Current OS not supported"
 	@exit 1
@@ -39,16 +40,16 @@ test-run-codecov:
 test-clean:
 ifeq "$(OS)" "Windows_NT"
 ifneq ($(GITHUB_ACTIONS), "true")
-	-@subst T: /d
-	-@python scripts\rmdir.py testmount
+	subst T: /d
+	python scripts\rmdir.py testmount
 endif
 else ifeq "$(shell uname -s)" "Linux"
-	-@sudo umount testmount
-	-@sudo rm -rf testmount
-	-@rm testfs -f
+	sudo umount testmount
+	sudo rm -rf testmount
+	rm testfs -f
 else ifeq "$(shell uname -s)" "Darwin"
-	-@hdiutil detach /Volumes/TESTMOUNT
-	-@rm testfs.dmg -f
+	hdiutil detach /Volumes/TESTMOUNT
+	rm testfs.dmg -f
 else
 	@echo "Current OS not supported"
 	@exit 1
