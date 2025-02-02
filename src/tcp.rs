@@ -19,7 +19,7 @@ mod test {
         F: FnOnce() -> Result<String, String>,
     {
         // Create a duration of 100ms for delays between steps
-        let delay_ms = Duration::from_millis(100);
+        let delay_ms = Duration::from_millis(200);
 
         // Save the current state of the application directory
         let preexisted = crate::test_support::save_app_directory();
