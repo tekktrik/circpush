@@ -45,7 +45,7 @@ pub fn start_server(port: u16) -> Result<String, String> {
 
 /// Starts the server in a seperate process by using `circpush run`
 #[cfg(target_family = "windows")]
-pub fn start_server(port: u16) -> String {
+pub fn start_server(port: u16) -> Result<String, String> {
     use std::os::windows::process::CommandExt;
     use windows_sys::Win32::System::Threading::{CREATE_NEW_PROCESS_GROUP, DETACHED_PROCESS};
     let _daemon = Command::new("circpush")
@@ -55,7 +55,7 @@ pub fn start_server(port: u16) -> String {
         .arg(port.to_string())
         .creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP)
         .spawn();
-    format!("Starting server")
+    Ok(format!("Starting server"))
 }
 
 /// Binds to the associated port on localhost as non-blocking
