@@ -55,7 +55,7 @@ pub fn start_server(port: u16) -> Result<String, String> {
         .arg(port.to_string())
         .creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP)
         .spawn();
-    Ok(format!("Starting server"))
+    Ok(String::from("Starting server"))
 }
 
 /// Binds to the associated port on localhost as non-blocking
