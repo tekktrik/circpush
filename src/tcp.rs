@@ -87,8 +87,6 @@ mod test {
 
     mod start_server {
 
-        // use super::*;
-
         use std::{thread, time::Duration};
 
         #[test]
@@ -99,15 +97,14 @@ mod test {
 
             // Start the server and wait to fully spin up
             crate::tcp::server::start_server(0).expect("Could not start server");
-            thread::sleep(Duration::from_millis(200));
 
             // Check the server is running
-            crate::tcp::client::ping(None).expect("Could not ping server");
+            while crate::tcp::client::ping(None).is_err() {}
             assert!(crate::tcp::server::is_server_running());
 
             // Stop the server and wait to fully shutdown
             crate::tcp::client::stop_server().expect("Could not stop server");
-            thread::sleep(Duration::from_millis(200));
+            while crate::tcp::client::ping(None).is_ok() {}
 
             // Restore the previous application directory if it existed
             if preexisted {
