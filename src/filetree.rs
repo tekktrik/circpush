@@ -9,6 +9,9 @@ pub const APP_DIRNAME: &str = env!("CARGO_PKG_NAME");
 /// The workspace directory name
 pub const WORKSPACE_DIRNAME: &str = "workspaces";
 
+/// The port directory name
+pub const PORT_DIRNAME: &str = "port";
+
 /// Get the application directory path
 pub fn get_app_dir() -> PathBuf {
     let config_dir = dirs::config_dir().expect("Could not locate config directory");
@@ -19,6 +22,17 @@ pub fn get_app_dir() -> PathBuf {
 pub fn ensure_app_dir() {
     let dir = get_app_dir();
     fs::create_dir_all(dir).expect("Could not create application directory");
+}
+
+/// Get the port directory path
+pub fn get_port_dir() -> PathBuf {
+    get_app_dir().join(PORT_DIRNAME)
+}
+
+/// Ensure the port directory exists
+pub fn ensure_port_dir() {
+    let dir = get_port_dir();
+    fs::create_dir_all(dir).expect("Could not create port directory");
 }
 
 /// Get the workspace directory path

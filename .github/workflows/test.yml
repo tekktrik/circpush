@@ -45,10 +45,15 @@ jobs:
           make lint
       - name: Install cargo llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Install circpush
+        shell: bash
+        run: |
+          pip install .
       - name: Prepare tests
         run: |
           make test-prep
       - name: Test code with code coverage
+        shell: bash
         run: |
           make test-run-codecov
       - name: Clean up tests

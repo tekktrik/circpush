@@ -12,7 +12,7 @@ mod workspace;
 use std::path::PathBuf;
 use std::{env, path::absolute};
 
-use filetree::ensure_workspace_dir;
+use filetree::{ensure_port_dir, ensure_workspace_dir};
 use pyo3::prelude::*;
 use std::process::exit;
 
@@ -69,9 +69,11 @@ enum Command {
     #[command(subcommand)]
     Server(ServerCommand),
     /// Ping the server
-    Ping,
-    /// Echo a message to the server
-    Echo { text: String },
+    Ping {
+        /// The TCP port to use for pinging the server
+        #[arg(short, long)]
+        port: Option<u16>,
+    },
     /// Start a file monitor for a given filename or glob pattern
     #[command(name = "start")]
     LinkStart {
@@ -110,9 +112,17 @@ enum Command {
 #[derive(Subcommand)]
 enum ServerCommand {
     /// Run the server in the current process
-    Run,
+    Run {
+        /// The TCP port to use for the server
+        #[arg(short, long)]
+        port: Option<u16>,
+    },
     /// Start the server in a new process
-    Start,
+    Start {
+        /// The TCP port to use for the server
+        #[arg(short, long)]
+        port: Option<u16>,
+    },
     /// Stop the server
     Stop,
 }
@@ -166,6 +176,7 @@ enum WorkspaceCommand {
 pub fn entry(cli_args: &[String]) -> Result<String, String> {
     // Ensure all necessary folders are created
     ensure_app_dir();
+    ensure_port_dir();
     ensure_workspace_dir();
 
     // Parse the corrected CLI arguments and perform the appropriate action
@@ -173,8 +184,7 @@ pub fn entry(cli_args: &[String]) -> Result<String, String> {
     match cli.command {
         Command::Server(server_command) => server_subentry(server_command),
         Command::Workspace(workspace_command) => workspace_subentry(workspace_command),
-        Command::Ping => crate::tcp::client::ping(),
-        Command::Echo { text } => crate::tcp::client::echo(text),
+        Command::Ping { port } => crate::tcp::client::ping(port),
         Command::LinkStart {
             read_pattern,
             mut path,
@@ -209,8 +219,20 @@ pub fn entry(cli_args: &[String]) -> Result<String, String> {
 /// Server command subentry, for performing the appropriate command
 fn server_subentry(server_command: ServerCommand) -> Result<String, String> {
     match server_command {
-        ServerCommand::Run => Ok(crate::tcp::server::run_server()),
-        ServerCommand::Start => Ok(crate::tcp::server::start_server()),
+        ServerCommand::Run { port } => {
+            if crate::tcp::server::is_server_running() {
+                return Err(String::from("Server already running"));
+            }
+            let port = port.unwrap_or_default();
+            Ok(crate::tcp::server::run_server(port)?)
+        }
+        ServerCommand::Start { port } => {
+            if crate::tcp::server::is_server_running() {
+                return Err(String::from("Server already running"));
+            }
+            let port = port.unwrap_or_default();
+            crate::tcp::server::start_server(port)
+        }
         ServerCommand::Stop => crate::tcp::client::stop_server(),
     }
 }
@@ -258,15 +280,15 @@ pub mod test_support {
     /// Test helper function for starting the server
     pub fn start_server() {
         thread::spawn(|| {
-            let _resp = server::run_server();
+            let _resp = server::run_server(0);
         });
-        while tcp::client::ping().is_err() {}
+        while tcp::client::ping(None).is_err() {}
     }
 
     /// Test helper function for stopping the server
     pub fn stop_server() {
         tcp::client::stop_server().expect("Could not stop server");
-        while tcp::client::ping().is_ok() {}
+        while tcp::client::ping(None).is_ok() {}
     }
 
     /// Test helper function for getting the test configuration directory filepath
@@ -298,6 +320,7 @@ pub mod test_support {
 
         // Ensure the application and workspace directories are recreated
         crate::filetree::ensure_app_dir();
+        crate::filetree::ensure_port_dir();
         crate::filetree::ensure_workspace_dir();
 
         // Returns whether the application directory existed before creating the fresh install
@@ -341,7 +364,7 @@ pub mod test_support {
     pub fn prepare_fresh_state() -> bool {
         let preexists = save_app_directory();
         start_server();
-        while tcp::client::ping().is_err() {}
+        while tcp::client::ping(None).is_err() {}
         preexists
     }
 

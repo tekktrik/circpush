@@ -27,14 +27,13 @@ else
 	@exit 1
 endif
 
-# TODO: This hasn't been tested on Windows
 .PHONY: test-run-html
 test-run-html:
-	cargo llvm-cov --html --features test-support --ignore-filename-regex src/lib.rs
+	RUST_TEST_TIME_UNIT=5000,10000 cargo llvm-cov --html --features test-support --ignore-filename-regex src/lib.rs
 
 .PHONY: test-run-codecov
 test-run-codecov:
-	cargo llvm-cov --codecov --output-path target/codecov.json --features test-support --ignore-filename-regex src/lib.rs
+	RUST_TEST_TIME_UNIT=5000,10000 cargo llvm-cov --codecov --output-path target/codecov.json --features test-support --ignore-filename-regex src/lib.rs
 
 .PHONY: test-clean
 test-clean:

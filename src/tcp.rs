@@ -26,7 +26,7 @@ mod test {
 
         // Spawn a thread for the server
         let handle = thread::spawn(|| {
-            let _resp = server::run_server();
+            let _resp = server::run_server(0);
         });
 
         // Allow the server to start
@@ -75,7 +75,7 @@ mod test {
         let ping_msg = "Ping received!";
 
         // Create a closure for pinging the servers
-        let ping_func = || client::ping();
+        let ping_func = || client::ping(None);
 
         // Run the closure with a server
         let response = with_threaded_server(ping_func);
@@ -85,41 +85,56 @@ mod test {
         assert_eq!(&msg, ping_msg);
     }
 
-    /// Tests the success of the echo functionality
-    #[test]
-    #[serial_test::serial]
-    fn echo_success() {
-        // Store the expected response message
-        let echo_msg = "This is a test message";
+    mod start_server {
 
-        // Create a closure for echoing the servers
-        let echo_func = || client::echo(echo_msg.to_string());
+        #[test]
+        #[serial_test::serial]
+        fn success() {
+            // Save the current state of the application directory
+            let preexisted = crate::test_support::save_app_directory();
 
-        // Run the closure with a server
-        let response = with_threaded_server(echo_func);
+            // Start the server and wait to fully spin up
+            crate::tcp::server::start_server(0).expect("Could not start server");
 
-        // Check that the response message matches the expected message
-        let msg = response.unwrap();
-        assert_eq!(&msg, echo_msg);
+            // Check the server is running
+            while crate::tcp::client::ping(None).is_err() {}
+            assert!(crate::tcp::server::is_server_running());
+
+            // Stop the server and wait to fully shutdown
+            crate::tcp::client::stop_server().expect("Could not stop server");
+            while crate::tcp::client::ping(None).is_ok() {}
+
+            // Restore the previous application directory if it existed
+            if preexisted {
+                crate::test_support::restore_app_directory();
+            }
+
+            // Check the server is no longer running
+            crate::tcp::client::ping(None).expect_err("Successfully pinged server");
+            assert!(!crate::tcp::server::is_server_running());
+        }
     }
 
     /// Tests the success of the stop server functionality
     #[test]
     #[serial_test::serial]
     fn stop_server_success() {
+        // Save the current state of the application directory
+        let preexisted = crate::test_support::save_app_directory();
+
         // Store the delay duration
-        let delay_ms = Duration::from_millis(100);
+        let delay_ms = Duration::from_millis(200);
 
         // Spawn a thread to run the server
         let handle = thread::spawn(|| {
-            let _resp = server::run_server();
+            let _resp = server::run_server(0);
         });
 
         // Pause for the delay duration
         thread::sleep(delay_ms);
 
         // Get expected response message
-        let port = server::PORT;
+        let port = client::get_port();
         let expected_msg = format!("Server on port {port} shutdown");
 
         // Stop the server and get the response message
@@ -127,6 +142,11 @@ mod test {
 
         // Wait for the server thread to finish
         handle.join().expect("Could not join with server thread");
+
+        // Restore the previous application directory if it existed
+        if preexisted {
+            crate::test_support::restore_app_directory();
+        }
 
         // Check that the response message matches the expected message
         let msg = response.unwrap();
@@ -655,7 +675,7 @@ mod test {
                 start_monitor_func().expect("Could not start file monitor 1");
 
                 // Wait for the server to track the newly created file
-                thread::sleep(Duration::from_millis(100));
+                thread::sleep(Duration::from_millis(200));
 
                 // Check that the file is being tracked by storing the response of client::view_monitor()
                 let existing_view = client::view_monitor(0, true);
@@ -664,7 +684,7 @@ mod test {
                 fs::remove_dir_all(tempdir.path()).expect("Could not remove temporary directory");
 
                 // Wait for the server to find the broken file monitor and stop it
-                thread::sleep(Duration::from_millis(100));
+                thread::sleep(Duration::from_millis(200));
 
                 // Check that the file is no longer being tracked by storing the response of client::view_monitor()
                 let deleted_view = client::view_monitor(0, true);
