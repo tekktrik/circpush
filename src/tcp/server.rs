@@ -246,7 +246,10 @@ pub fn run_server(port: u16) -> Result<String, String> {
     Ok(String::from("Server process ended"))
 }
 
+#[cfg(all(test, feature = "test-support"))]
 mod test {
+
+    use super::*;
 
     #[test]
     #[serial_test::serial]
@@ -254,8 +257,19 @@ mod test {
         // Save the current state of the application directory
         let preexisted = crate::test_support::save_app_directory();
 
-        // Attempt to run the server on TCP port 1
-        let response = crate::tcp::server::run_server(1);
+        // Start a server
+        start_server(0).expect("Could not start server");
+
+        // Get the port used by the server
+        while crate::tcp::client::ping(None).is_err() {}
+        let port = crate::tcp::client::get_port();
+
+        // Attempt to run the server on the same port
+        let response = crate::tcp::server::run_server(port);
+
+        // Stop the server
+        crate::tcp::client::stop_server().expect("Could not stop the server");
+        while crate::tcp::client::ping(None).is_ok() {}
 
         // Restore the previous application directory if it existed
         if preexisted {
