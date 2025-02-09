@@ -86,7 +86,6 @@ mod test {
     }
 
     mod start_server {
-        use std::{thread, time::Duration};
 
         #[test]
         #[serial_test::serial]
