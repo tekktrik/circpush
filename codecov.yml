@@ -3,3 +3,4 @@
 
 ignore:
   - "src/lib.rs"
+patch: off
