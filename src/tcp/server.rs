@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 use crate::commands::{Request, Response, STOP_RESPONSE};
+use crate::filetree::get_port_dir;
 use crate::monitor::FileMonitor;
 use serde::Deserialize;
+use std::fs;
 use std::io::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::ops::Index;
@@ -15,9 +17,6 @@ use std::time::Duration;
 #[cfg(target_family = "unix")]
 use std::process::Stdio;
 
-/// Default port on which to start the server
-pub const PORT: u16 = 61553;
-
 /// State of the server, consisting of the file monitors and the current
 /// workspace name, if any
 struct ServerState {
@@ -25,40 +24,58 @@ struct ServerState {
     workspace_name: String,
 }
 
+/// Checks to see if server is already running
+pub fn is_server_running() -> bool {
+    crate::tcp::client::get_port() != 0
+}
+
 /// Starts the server in a seperate process by using `circpush run`
 #[cfg(target_family = "unix")]
-pub fn start_server() -> String {
+pub fn start_server(port: u16) -> Result<String, String> {
     let _daemon = Command::new("circpush")
         .arg("server")
         .arg("run")
+        .arg("--port")
+        .arg(port.to_string())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn();
-    format!("Server started on port {PORT}")
+    Ok(String::from("Starting server"))
 }
 
 /// Starts the server in a seperate process by using `circpush run`
 #[cfg(target_family = "windows")]
-pub fn start_server() -> String {
+pub fn start_server(port: u16) -> String {
     use std::os::windows::process::CommandExt;
     use windows_sys::Win32::System::Threading::{CREATE_NEW_PROCESS_GROUP, DETACHED_PROCESS};
     let _daemon = Command::new("circpush")
         .arg("server")
         .arg("run")
+        .arg("--port")
+        .arg(port.to_string())
         .creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP)
         .spawn();
-    format!("Server started on port {PORT}")
+    format!("Starting server")
 }
 
 /// Binds to the associated port on localhost as non-blocking
-fn bind_socket() -> TcpListener {
+fn bind_socket(port: u16) -> Result<TcpListener, String> {
     // Get the connection information
     let localhost_addr_v4 = Ipv4Addr::LOCALHOST;
     let localhost_addr = IpAddr::V4(localhost_addr_v4);
-    let socket_addr = SocketAddr::new(localhost_addr, PORT);
+    let socket_addr = SocketAddr::new(localhost_addr, port);
 
     // Bind to the necessary port
-    let listener = TcpListener::bind(socket_addr).expect("Could not bind server socket");
+    let listener = match TcpListener::bind(socket_addr) {
+        Ok(listener) => listener,
+        Err(_) => return Err(String::from("Could not bind to port")),
+    };
+
+    // Save the allocated port
+    let assigned_port = listener.local_addr().unwrap().port();
+    let assigned_port_str = assigned_port.to_string();
+    let port_file = get_port_dir().join(assigned_port_str);
+    fs::File::create_new(port_file).expect("Could not create port file");
 
     // Set the TCP listener to non-blocking mode
     listener
@@ -66,7 +83,7 @@ fn bind_socket() -> TcpListener {
         .expect("Could not set the socket to non-blocking");
 
     // Return the TCP listener
-    listener
+    Ok(listener)
 }
 
 /// Handle the TCP stream connection and modify the list of monitors accordingly
@@ -83,7 +100,6 @@ fn handle_connection(mut stream: TcpStream, state: &mut ServerState) -> bool {
     // Handle the request and create the associated response
     let response = match &request {
         Request::Ping => Response::NoData,
-        Request::Echo { msg } => Response::Message { msg: msg.clone() },
         Request::Shutdown => Response::Message {
             msg: String::from_str(STOP_RESPONSE).unwrap(),
         },
@@ -186,9 +202,9 @@ fn handle_connection(mut stream: TcpStream, state: &mut ServerState) -> bool {
 }
 
 /// Run the server loop
-pub fn run_server() -> String {
+pub fn run_server(port: u16) -> Result<String, String> {
     // Get the TCP listener
-    let listener = bind_socket();
+    let listener = bind_socket(port)?;
 
     // Get the duration to pause  in between checking for connections
     let sleep_duration = Duration::from_millis(10);
@@ -227,5 +243,30 @@ pub fn run_server() -> String {
         }
         sleep(sleep_duration); // TODO: Remove later?
     }
-    String::from("Server process ended")
+    Ok(String::from("Server process ended"))
+}
+
+mod test {
+
+    #[test]
+    #[serial_test::serial]
+    fn bind_error() {
+        // Save the current state of the application directory
+        let preexisted = crate::test_support::save_app_directory();
+
+        // Attempt to run the server on TCP port 1
+        let response = crate::tcp::server::run_server(1);
+
+        // Restore the previous application directory if it existed
+        if preexisted {
+            crate::test_support::restore_app_directory();
+        }
+
+        // Store the expected error message
+        let expected = "Could not bind to port";
+
+        // Check running the server on TCP port 1 returns the expected error message
+        let err_msg = response.expect_err("Successfully started server");
+        assert_eq!(&err_msg, expected);
+    }
 }

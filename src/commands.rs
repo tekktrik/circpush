@@ -15,9 +15,6 @@ pub const STOP_RESPONSE: &str = "@stopping";
 #[serde(tag = "type")]
 pub enum Request {
     Ping,
-    Echo {
-        msg: String,
-    },
     Shutdown,
     StartLink {
         read_pattern: String,

@@ -2,28 +2,95 @@
 // SPDX-License-Identifier: MIT
 
 use crate::commands::{Request, Response, STOP_RESPONSE};
+use crate::filetree::get_port_dir;
 use crate::monitor::{as_table, FileMonitor};
-use crate::tcp::server::PORT;
 use crate::workspace::{Workspace, WorkspaceLoadError};
 use serde::Deserialize;
+use std::fs;
 use std::io::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::path::PathBuf;
 use std::time::Duration;
 
+/// Get the active port
+pub fn get_port() -> u16 {
+    // Clean the ports of unused or broken connections
+    let active_ports = clean_ports();
+
+    // Get the port based on the number of active ports found
+    let num_active = active_ports.len();
+
+    // No active ports => Use a randomly assigned port
+    if num_active == 0 {
+        0
+    }
+    // Single active port => Use the existing active port
+    else {
+        active_ports[0]
+    }
+}
+
+/// Clean the port directory folder and keep only any active port(s)
+fn clean_ports() -> Vec<u16> {
+    // Create a list for storing active port numbers
+    let mut active_ports = Vec::new();
+
+    // Get the port directory
+    let port_dir = get_port_dir();
+
+    // Iterate through files in the port directory
+    for entry in fs::read_dir(port_dir)
+        .expect("Could not read port directory")
+        .flatten()
+    {
+        // Get the port number as an unsigned 16-bit number
+        let potential_port_str = entry
+            .file_name()
+            .into_string()
+            .expect("Could not convert to string");
+        let potential_port_num = potential_port_str
+            .parse::<u16>()
+            .expect("Could not parse to port number");
+
+        // Add the server to the list of active ports if it responds to a ping
+        if ping(Some(potential_port_num)).is_ok() {
+            active_ports.push(potential_port_num);
+        }
+        // Otherwise, attempt to remove the port file from the port directory
+        else {
+            remove_port(potential_port_num)
+        }
+    }
+
+    // Return the list of active ports
+    active_ports
+}
+
+/// Remove the given port file from the port directory
+fn remove_port(port: u16) {
+    // Get the port directory
+    let port_dir = get_port_dir();
+
+    // Get the port file associated with the connection
+    let port_file = port_dir.join(port.to_string());
+
+    // Remove the port file
+    fs::remove_file(port_file).expect("Could not remove inactive port file");
+}
+
 /// Open a non-blocking connection to the TCP server
-fn open_connection() -> Result<TcpStream, String> {
+fn open_connection(port: u16) -> Result<TcpStream, String> {
     // Get the connection information
     let localhost_addr_v4 = Ipv4Addr::LOCALHOST;
     let localhost_addr = IpAddr::V4(localhost_addr_v4);
-    let socket_addr = SocketAddr::new(localhost_addr, PORT);
+    let socket_addr = SocketAddr::new(localhost_addr, port);
 
     // Get the TCP stream
     let stream = match TcpStream::connect(socket_addr) {
         Ok(stream) => stream,
         Err(_) => {
             return Err(format!(
-                "Could not connect to the server on port {PORT}, is the server running?"
+                "Could not connect to the server on port {port}, is the server running?"
             ))
         }
     };
@@ -39,19 +106,37 @@ fn open_connection() -> Result<TcpStream, String> {
 }
 
 /// Communicate a request to the server and receive the response
-fn communicate(request: Request) -> Result<Response, String> {
-    let mut stream = open_connection()?;
+fn communicate(port: Option<u16>, request: Request) -> Result<Response, String> {
+    // Get the TCP port
+    let port = match port {
+        Some(port) => port,
+        None => get_port(),
+    };
+
+    // Open the connection to the server on the port
+    let mut stream = open_connection(port)?;
+
+    // Send the request to the server
     let raw_request = serde_json::to_string(&request).expect("Could not serialize requiest");
     stream
         .write_all(raw_request.as_bytes())
         .expect("Could not write request");
+
+    // Return response from the server
     let mut serialization = serde_json::Deserializer::from_reader(&stream);
     Ok(Response::deserialize(&mut serialization).expect("Could not deserialize the response"))
 }
 
 /// Send a ping request to the server
-pub fn ping() -> Result<String, String> {
-    match communicate(Request::Ping) {
+pub fn ping(port: Option<u16>) -> Result<String, String> {
+    // Get the TCP port
+    let port = match port {
+        Some(port) => port,
+        None => get_port(),
+    };
+
+    // Communicate with the server
+    match communicate(Some(port), Request::Ping) {
         Ok(Response::NoData) => Ok(String::from("Ping received!")),
         _ => Err(String::from(
             "ERROR: Did not receive expected ping response",
@@ -59,22 +144,28 @@ pub fn ping() -> Result<String, String> {
     }
 }
 
-/// Send an echo request to the server
-pub fn echo(message: String) -> Result<String, String> {
-    match communicate(Request::Echo { msg: message }) {
-        Ok(Response::Message { msg }) => Ok(msg),
-        _ => Err(String::from("ERROR: Did not receive echo response")),
-    }
-}
-
 /// Send a stop server request to the server
 pub fn stop_server() -> Result<String, String> {
-    match communicate(Request::Shutdown) {
+    // Get the TCP port
+    let port = get_port();
+
+    // Communicate with the server
+    let msg = match communicate(Some(port), Request::Shutdown) {
         Ok(Response::Message { msg }) if msg == STOP_RESPONSE => {
-            Ok(format!("Server on port {PORT} shutdown"))
+            format!("Server on port {port} shutdown")
         }
-        _ => Err(String::from("ERROR: Did not receive expected response")),
-    }
+        _ => return Err(String::from("ERROR: Did not receive expected response")),
+    };
+
+    // Get port file for the port
+    let port_str = port.to_string();
+    let port_file = get_port_dir().join(port_str);
+
+    // Delete port file
+    fs::remove_file(port_file).expect("Could not remove port file {port}");
+
+    // Return the server message
+    Ok(msg)
 }
 
 /// Send a start file monitor request to the server
@@ -83,15 +174,20 @@ pub fn start_monitor(
     write_directory: PathBuf,
     base_directory: PathBuf,
 ) -> Result<String, String> {
+    // Prevent the use of symlinks
     if write_directory.as_path().is_symlink() || base_directory.as_path().is_symlink() {
         return Err(String::from("ERROR: Symlinks are not allowed"));
     }
 
-    match communicate(Request::StartLink {
-        read_pattern,
-        write_directory,
-        base_directory,
-    }) {
+    // Communicate with the server
+    match communicate(
+        None,
+        Request::StartLink {
+            read_pattern,
+            write_directory,
+            base_directory,
+        },
+    ) {
         Ok(Response::Message { msg }) => Ok(msg),
         _ => Err(String::from("ERROR: Could not start link")),
     }
@@ -99,7 +195,7 @@ pub fn start_monitor(
 
 /// Send a stop file monitor request to the server
 pub fn stop_monitor(number: usize) -> Result<String, String> {
-    match communicate(Request::StopLink { number }) {
+    match communicate(None, Request::StopLink { number }) {
         Ok(Response::Message { msg }) => Ok(msg),
         Ok(Response::ErrorMessage { msg }) => Err(msg),
         _ => Err(String::from("ERROR: Could not stop link")),
@@ -108,7 +204,7 @@ pub fn stop_monitor(number: usize) -> Result<String, String> {
 
 fn get_monitor_list(number: usize) -> Result<Vec<FileMonitor>, String> {
     // Get the response of the server communication
-    let response = match communicate(Request::ViewLink { number }) {
+    let response = match communicate(None, Request::ViewLink { number }) {
         Ok(Response::Links { json }) => json,
         Ok(Response::ErrorMessage { msg }) => return Err(msg),
         _ => return Err(String::from("ERROR: Could not retrieve link(s)")),
@@ -154,9 +250,12 @@ pub fn save_workspace(name: &str, desc: &str, force: bool) -> Result<String, Str
 
 /// Sets the workspace name
 pub fn set_workspace_name(name: &str) -> Result<String, String> {
-    match communicate(Request::SetWorkspaceName {
-        name: name.to_owned(),
-    }) {
+    match communicate(
+        None,
+        Request::SetWorkspaceName {
+            name: name.to_owned(),
+        },
+    ) {
         Ok(Response::NoData) => Ok(format!("Workspace name set to '{name}'")),
         _ => Err(String::from("ERROR: Did not receive expected response")),
     }
@@ -200,7 +299,7 @@ pub fn load_workspace(name: &str) -> Result<String, String> {
 /// View the current workspace
 pub fn get_current_workspace() -> Result<String, String> {
     // Get the response of the server communication
-    let mut msg = match communicate(Request::ViewWorkspaceName) {
+    let mut msg = match communicate(None, Request::ViewWorkspaceName) {
         Ok(Response::Message { msg }) => msg,
         _ => return Err(String::from("ERROR: Could not retrieve workspace name")),
     };
@@ -219,49 +318,93 @@ mod test {
 
     use super::*;
 
+    mod port_files {
+
+        use super::*;
+
+        #[test]
+        #[serial_test::serial]
+        fn remove_port_file_success() {
+            // Save the current state of the application directory
+            let preexisted = crate::test_support::save_app_directory();
+
+            // Create a fake port file to delete
+            let port = "12345";
+            let port_dir = get_port_dir();
+            let port_file = port_dir.join(port);
+            fs::File::create_new(&port_file).expect("Could not create fake port file");
+
+            // Check the file was created
+            assert!(port_file.is_file());
+
+            let active_ports = clean_ports();
+
+            // Restore the previous application directory if it existed
+            if preexisted {
+                crate::test_support::restore_app_directory();
+            }
+
+            // Check there are no active ports and the file was deleted
+            assert!(active_ports.is_empty());
+            assert!(!port_file.exists());
+        }
+    }
+
     /// Tests that the ping function returns an error if the server is not running
     #[test]
     #[serial_test::serial]
     fn ping_error() {
+        // Save the current state of the application directory
+        let preexisted = crate::test_support::save_app_directory();
+
         // Get the expected error message
         let expected_err = "ERROR: Did not receive expected ping response";
 
         // Get the response of the command
-        let response = ping();
+        let response = ping(None);
+
+        // Restore the previous application directory if it existed
+        if preexisted {
+            crate::test_support::restore_app_directory();
+        }
 
         // Check the error response
         let err_msg = response.unwrap_err();
         assert_eq!(&err_msg, expected_err);
     }
 
-    /// Tests that the echo function returns an error if the server is not running  
-    #[test]
-    #[serial_test::serial]
-    fn echo_error() {
-        // Get the expected error message
-        let expected_err = "ERROR: Did not receive echo response";
+    mod stop_server {
 
-        // Get the response of the command
-        let response = echo(String::from("testmsg"));
+        use super::*;
 
-        // Check the error response
-        let err_msg = response.unwrap_err();
-        assert_eq!(&err_msg, expected_err);
-    }
+        /// Tests that the stop server function returns an error if the server is not running
+        #[test]
+        #[serial_test::serial]
+        fn server_inactive() {
+            // Save the current state of the application directory
+            let preexisted = crate::test_support::save_app_directory();
 
-    /// Tests that the stop server function returns an error if the server is not running
-    #[test]
-    #[serial_test::serial]
-    fn stop_server_error() {
-        // Get the expected error message
-        let expected_err = "ERROR: Did not receive expected response";
+            // Get the expected error message
+            let expected_err = "ERROR: Did not receive expected response";
 
-        // Get the response of the command
-        let response = stop_server();
+            // Get the response of the command
+            let response = stop_server();
 
-        // Check the error response
-        let err_msg = response.unwrap_err();
-        assert_eq!(&err_msg, expected_err);
+            // Restore the previous application directory if it existed
+            if preexisted {
+                crate::test_support::restore_app_directory();
+            }
+
+            // Check the error response
+            let err_msg = response.unwrap_err();
+            assert_eq!(&err_msg, expected_err);
+        }
+
+        // #[test]
+        // #[serial_test::serial]
+        // fn port_file_delete_error() {
+        //     todo!()
+        // }
     }
 
     mod start_monitor {
@@ -316,6 +459,9 @@ mod test {
         #[test]
         #[serial_test::serial]
         fn server_not_running() {
+            // Save the current state of the application directory
+            let preexisted = crate::test_support::save_app_directory();
+
             // Get the expected error message
             let resp_msg = "ERROR: Could not start link";
 
@@ -325,6 +471,11 @@ mod test {
                 PathBuf::from("test"),
                 PathBuf::from("test"),
             );
+
+            // Restore the previous application directory if it existed
+            if preexisted {
+                crate::test_support::restore_app_directory();
+            }
 
             // Check the error response
             let msg = response.unwrap_err();
@@ -336,11 +487,19 @@ mod test {
     #[test]
     #[serial_test::serial]
     fn stop_monitor_error() {
+        // Save the current state of the application directory
+        let preexisted = crate::test_support::save_app_directory();
+
         // Get the expected error message
         let resp_msg = "ERROR: Could not stop link";
 
         // Get the response of the command
         let response = stop_monitor(0);
+
+        // Restore the previous application directory if it existed
+        if preexisted {
+            crate::test_support::restore_app_directory();
+        }
 
         // Check the error response
         let msg = response.unwrap_err();
@@ -351,11 +510,19 @@ mod test {
     #[test]
     #[serial_test::serial]
     fn get_monitor_list_error() {
+        // Save the current state of the application directory
+        let preexisted = crate::test_support::save_app_directory();
+
         // Get the expected error message
         let resp_msg = "ERROR: Could not retrieve link(s)";
 
         // Get the response of the command
         let response = get_monitor_list(1);
+
+        // Restore the previous application directory if it existed
+        if preexisted {
+            crate::test_support::restore_app_directory();
+        }
 
         // Check the error response
         let msg = response.unwrap_err();
@@ -366,11 +533,19 @@ mod test {
     #[test]
     #[serial_test::serial]
     fn save_workspace_error() {
+        // Save the current state of the application directory
+        let preexisted = crate::test_support::save_app_directory();
+
         // Get the expected error message
         let resp_msg = "ERROR: Could not retrieve link(s)";
 
         // Get the response of the command
         let response = save_workspace("test", "test", false);
+
+        // Restore the previous application directory if it existed
+        if preexisted {
+            crate::test_support::restore_app_directory();
+        }
 
         // Check the error response
         let msg = response.unwrap_err();
@@ -381,11 +556,19 @@ mod test {
     #[test]
     #[serial_test::serial]
     fn set_workspace_name_error() {
+        // Save the current state of the application directory
+        let preexisted = crate::test_support::save_app_directory();
+
         // Get the expected error message
         let resp_msg = "ERROR: Did not receive expected response";
 
         // Get the response of the command
         let response = set_workspace_name("test");
+
+        // Restore the previous application directory if it existed
+        if preexisted {
+            crate::test_support::restore_app_directory();
+        }
 
         // Check the error response
         let msg = response.unwrap_err();
@@ -396,11 +579,19 @@ mod test {
     #[test]
     #[serial_test::serial]
     fn load_workspace_error() {
+        // Save the current state of the application directory
+        let preexisted = crate::test_support::save_app_directory();
+
         // Get the expected error message
         let resp_msg = "ERROR: Could not load the workspace";
 
         // Get the response of the command
         let response = load_workspace("doesnotexist");
+
+        // Restore the previous application directory if it existed
+        if preexisted {
+            crate::test_support::restore_app_directory();
+        }
 
         // Check the error response
         let msg = response.unwrap_err();
@@ -411,11 +602,19 @@ mod test {
     #[test]
     #[serial_test::serial]
     fn get_current_workspace_error() {
+        // Save the current state of the application directory
+        let preexisted = crate::test_support::save_app_directory();
+
         // Get the expected error message
         let resp_msg = "ERROR: Could not retrieve workspace name";
 
         // Get the response of the command
         let response = get_current_workspace();
+
+        // Restore the previous application directory if it existed
+        if preexisted {
+            crate::test_support::restore_app_directory();
+        }
 
         // Check the error response
         let msg = response.unwrap_err();
