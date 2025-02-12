@@ -331,7 +331,12 @@ pub mod test_support {
     /// that would have interfered with its prior state.
     ///
     /// Used in combination with save_app_directory()
-    pub fn restore_app_directory() {
+    pub fn restore_app_directory(restore: bool) {
+        // If no need to restore, skip running
+        if !restore {
+            return;
+        }
+
         // Get the applciation and test configuration directories
         let app_directory = crate::filetree::get_app_dir();
         let test_directory = get_test_directory();
@@ -375,9 +380,7 @@ pub mod test_support {
     /// Used in combination with prepare_fresh_state()
     pub fn restore_previous_state(preexisted: bool) {
         stop_server();
-        if preexisted {
-            restore_app_directory();
-        }
+        restore_app_directory(preexisted);
     }
 
     /// Test helper function for parsing table components out of a response message

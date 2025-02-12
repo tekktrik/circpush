@@ -249,6 +249,8 @@ pub fn run_server(port: u16) -> Result<String, String> {
 #[cfg(all(test, feature = "test-support"))]
 mod test {
 
+    use std::thread;
+
     use super::*;
 
     #[test]
@@ -269,12 +271,11 @@ mod test {
 
         // Stop the server
         crate::tcp::client::stop_server().expect("Could not stop the server");
-        while crate::tcp::client::ping(None).is_ok() {}
+        thread::sleep(Duration::from_millis(200));
+        assert!(!crate::tcp::server::is_server_running());
 
         // Restore the previous application directory if it existed
-        if preexisted {
-            crate::test_support::restore_app_directory();
-        }
+        crate::test_support::restore_app_directory(preexisted);
 
         // Store the expected error message
         let expected = "Could not bind to port";
