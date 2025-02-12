@@ -45,9 +45,7 @@ mod test {
         handle.join().expect("Could not join with server thread");
 
         // Restore the previous application directory if it existed
-        if preexisted {
-            crate::test_support::restore_app_directory();
-        }
+        crate::test_support::restore_app_directory(preexisted);
 
         // Return the result of the given function
         result
@@ -86,6 +84,7 @@ mod test {
     }
 
     mod start_server {
+        use std::{thread, time::Duration};
 
         #[test]
         #[serial_test::serial]
@@ -102,12 +101,11 @@ mod test {
 
             // Stop the server and wait to fully shutdown
             crate::tcp::client::stop_server().expect("Could not stop server");
-            while crate::tcp::client::ping(None).is_ok() {}
+            thread::sleep(Duration::from_millis(200));
+            assert!(!crate::tcp::server::is_server_running());
 
             // Restore the previous application directory if it existed
-            if preexisted {
-                crate::test_support::restore_app_directory();
-            }
+            crate::test_support::restore_app_directory(preexisted);
 
             // Check the server is no longer running
             crate::tcp::client::ping(None).expect_err("Successfully pinged server");
@@ -144,9 +142,7 @@ mod test {
         handle.join().expect("Could not join with server thread");
 
         // Restore the previous application directory if it existed
-        if preexisted {
-            crate::test_support::restore_app_directory();
-        }
+        crate::test_support::restore_app_directory(preexisted);
 
         // Check that the response message matches the expected message
         let msg = response.unwrap();
@@ -631,20 +627,44 @@ mod test {
         }
     }
 
-    /// Tests view a workspace (specifically when none are active)
-    #[test]
-    #[serial_test::serial]
-    fn view_workspace() {
-        // Store the expected response message
-        let expected_msg = "No workspace is currently active";
+    mod view_workspace {
 
-        // Get a closure for viewing a workspace
-        let view_workspace_func = || client::get_current_workspace();
-        let response = with_threaded_server(view_workspace_func);
+        use super::*;
 
-        // Check that the response message matches the expected message
-        let msg = response.unwrap();
-        assert_eq!(msg, expected_msg);
+        /// Tests view a workspace (specifically when one is active)
+        #[test]
+        #[serial_test::serial]
+        fn active() {
+            // Store the expected response message
+            let expected_msg = "testname";
+
+            // Get a closure for viewing a workspace
+            let view_workspace_func = || {
+                client::set_workspace_name(&expected_msg).expect("Could not set workspace name");
+                client::get_current_workspace()
+            };
+            let response = with_threaded_server(view_workspace_func);
+
+            // Check that the response message matches the expected message
+            let msg = response.unwrap();
+            assert_eq!(msg, expected_msg);
+        }
+
+        /// Tests view a workspace (specifically when none is active)
+        #[test]
+        #[serial_test::serial]
+        fn none() {
+            // Store the expected response message
+            let expected_msg = "No workspace is currently active";
+
+            // Get a closure for viewing a workspace
+            let view_workspace_func = || client::get_current_workspace();
+            let response = with_threaded_server(view_workspace_func);
+
+            // Check that the response message matches the expected message
+            let msg = response.unwrap();
+            assert_eq!(msg, expected_msg);
+        }
     }
 
     mod run_server {

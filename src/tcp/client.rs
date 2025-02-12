@@ -340,9 +340,7 @@ mod test {
             let active_ports = clean_ports();
 
             // Restore the previous application directory if it existed
-            if preexisted {
-                crate::test_support::restore_app_directory();
-            }
+            crate::test_support::restore_app_directory(preexisted);
 
             // Check there are no active ports and the file was deleted
             assert!(active_ports.is_empty());
@@ -364,9 +362,7 @@ mod test {
         let response = ping(None);
 
         // Restore the previous application directory if it existed
-        if preexisted {
-            crate::test_support::restore_app_directory();
-        }
+        crate::test_support::restore_app_directory(preexisted);
 
         // Check the error response
         let err_msg = response.unwrap_err();
@@ -391,9 +387,7 @@ mod test {
             let response = stop_server();
 
             // Restore the previous application directory if it existed
-            if preexisted {
-                crate::test_support::restore_app_directory();
-            }
+            crate::test_support::restore_app_directory(preexisted);
 
             // Check the error response
             let err_msg = response.unwrap_err();
@@ -473,9 +467,7 @@ mod test {
             );
 
             // Restore the previous application directory if it existed
-            if preexisted {
-                crate::test_support::restore_app_directory();
-            }
+            crate::test_support::restore_app_directory(preexisted);
 
             // Check the error response
             let msg = response.unwrap_err();
@@ -497,9 +489,7 @@ mod test {
         let response = stop_monitor(0);
 
         // Restore the previous application directory if it existed
-        if preexisted {
-            crate::test_support::restore_app_directory();
-        }
+        crate::test_support::restore_app_directory(preexisted);
 
         // Check the error response
         let msg = response.unwrap_err();
@@ -520,9 +510,7 @@ mod test {
         let response = get_monitor_list(1);
 
         // Restore the previous application directory if it existed
-        if preexisted {
-            crate::test_support::restore_app_directory();
-        }
+        crate::test_support::restore_app_directory(preexisted);
 
         // Check the error response
         let msg = response.unwrap_err();
@@ -543,9 +531,7 @@ mod test {
         let response = save_workspace("test", "test", false);
 
         // Restore the previous application directory if it existed
-        if preexisted {
-            crate::test_support::restore_app_directory();
-        }
+        crate::test_support::restore_app_directory(preexisted);
 
         // Check the error response
         let msg = response.unwrap_err();
@@ -566,9 +552,7 @@ mod test {
         let response = set_workspace_name("test");
 
         // Restore the previous application directory if it existed
-        if preexisted {
-            crate::test_support::restore_app_directory();
-        }
+        crate::test_support::restore_app_directory(preexisted);
 
         // Check the error response
         let msg = response.unwrap_err();
@@ -589,9 +573,7 @@ mod test {
         let response = load_workspace("doesnotexist");
 
         // Restore the previous application directory if it existed
-        if preexisted {
-            crate::test_support::restore_app_directory();
-        }
+        crate::test_support::restore_app_directory(preexisted);
 
         // Check the error response
         let msg = response.unwrap_err();
@@ -612,9 +594,7 @@ mod test {
         let response = get_current_workspace();
 
         // Restore the previous application directory if it existed
-        if preexisted {
-            crate::test_support::restore_app_directory();
-        }
+        crate::test_support::restore_app_directory(preexisted);
 
         // Check the error response
         let msg = response.unwrap_err();
