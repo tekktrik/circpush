@@ -3,6 +3,7 @@
 
 [package]
 name = "circpush"
+authors = ["Alec Delaney"]
 version = "0.1.0"
 edition = "2021"
 resolver = "2"

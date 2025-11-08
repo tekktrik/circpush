@@ -269,6 +269,8 @@ fn workspace_subentry(workspace_command: WorkspaceCommand) -> Result<String, Str
 #[cfg(feature = "test-support")]
 pub mod test_support {
 
+    use pathdiff::diff_paths;
+
     use super::*;
 
     use std::thread;
@@ -434,7 +436,7 @@ pub mod test_support {
     }
 
     /// Test helper function for generating the expected list of table components for all rows of said table
-    pub fn generate_expected_parts<B, W>(
+    pub fn generate_expected_monitor_response_parts<B, W>(
         path_components: &[(B, W)],
         monitor_num: usize,
         nontable_line: Option<&str>,
@@ -498,5 +500,39 @@ pub mod test_support {
 
         // Return the list of components for the table
         components
+    }
+
+    /// Test helper function for generating the expected list of table components for all rows of said table
+    pub fn generate_expected_link_response_parts<S, D, B>(
+        abspath_components: &[(S, D)],
+        relative_to: Option<&B>,
+    ) -> Vec<Vec<String>>
+    where
+        S: AsRef<Path>,
+        D: AsRef<Path>,
+        B: AsRef<Path>,
+    {
+        let mut requested_paths = Vec::new();
+        requested_paths.push(vec![String::from("Source"), String::from("Destination")]);
+        
+        for (src, dest) in abspath_components {
+            let (req_src, req_dest) = match relative_to {
+                Some(base) => {
+                    let diff_src = diff_paths(&src, base).expect("Could not make source relative");
+                    let diff_dest = diff_paths(&dest, base).expect("Could not make destination relative");
+                    (diff_src, diff_dest)
+                },
+                None => {
+                    (src.as_ref().to_path_buf(), dest.as_ref().to_path_buf())
+                },
+            };
+            
+            let str_src = req_src.to_str().expect("Could not convert source to string").to_owned();
+            let str_dest = req_dest.to_str().expect("Could not convert source to string").to_owned();
+
+            requested_paths.push(vec![str_src, str_dest]);
+        }
+        
+        requested_paths
     }
 }

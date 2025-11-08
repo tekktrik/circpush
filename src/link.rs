@@ -609,6 +609,17 @@ mod tests {
             assert!(!link.destination.as_path().exists());
         }
 
+        mod to_table_record {
+
+            use super::*;
+
+            /// Tests the implementation of FileLink::to_table_record() using relative paths
+            fn relative() {}
+
+            /// Tests the implementation of FileLink::to_table_record() using absolute paths
+            fn absolute() {}
+        }
+
         mod trait_tabled {
 
             use std::iter::zip;

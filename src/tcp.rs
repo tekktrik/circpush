@@ -312,8 +312,9 @@ mod test {
             };
 
             // Generate the full set of parsed parts of the expected response message
-            let expected_parts =
-                crate::test_support::generate_expected_parts(&expecteds, link_num, None);
+            let expected_parts = crate::test_support::generate_expected_monitor_response_parts(
+                &expecteds, link_num, None,
+            );
 
             // Get a closure for viewing the file monitor(s)
             let view_monitor_func = || {
@@ -679,8 +680,11 @@ mod test {
         fn broken_monitors() {
             // Get the expected response message for just a table with the header row
             let path_components: Vec<(&Path, &Path)> = Vec::new();
-            let expected_msg =
-                crate::test_support::generate_expected_parts(&path_components, 0, None);
+            let expected_msg = crate::test_support::generate_expected_monitor_response_parts(
+                &path_components,
+                0,
+                None,
+            );
 
             // Get the closure for starting the file monitor
             let (start_monitor_func, tempdir) = get_start_monitor_closure();

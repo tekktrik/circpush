@@ -783,7 +783,7 @@ mod test {
             let base_filepath = PathBuf::from("/circpush");
             let write_filepath = PathBuf::from("/circpush/tests/assets/sandbox/");
             let path_components = [(base_filepath, write_filepath)];
-            let expected_components = crate::test_support::generate_expected_parts(
+            let expected_components = crate::test_support::generate_expected_monitor_response_parts(
                 &path_components,
                 0,
                 Some(&format!("{name} - A test workspace")),
@@ -824,8 +824,11 @@ mod test {
             let base_filepath = PathBuf::from("/circpush");
             let write_filepath = PathBuf::from("/circpush/tests/assets/sandbox/");
             let path_components = [(base_filepath, write_filepath)];
-            let expected_components =
-                crate::test_support::generate_expected_parts(&path_components, 0, Some(name));
+            let expected_components = crate::test_support::generate_expected_monitor_response_parts(
+                &path_components,
+                0,
+                Some(name),
+            );
 
             // View the workspace
             let response = view_workspace(name, true).expect("Could not view workspace");
