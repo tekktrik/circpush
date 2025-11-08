@@ -6,6 +6,7 @@ use crate::filetree::get_port_dir;
 use crate::monitor::{as_table, FileMonitor};
 use crate::workspace::{Workspace, WorkspaceLoadError};
 use serde::Deserialize;
+use std::collections::HashSet;
 use std::fs;
 use std::io::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
@@ -76,6 +77,16 @@ fn remove_port(port: u16) {
 
     // Remove the port file
     fs::remove_file(port_file).expect("Could not remove inactive port file");
+}
+
+/// Gets the server info
+pub fn get_server_info() -> Result<String, String> {
+    let port = get_port();
+    if port != 0 {
+        Ok(format!("Server running on port {port}"))
+    } else {
+        Err(String::from("Server not currently running"))
+    }
 }
 
 /// Open a non-blocking connection to the TCP server
@@ -221,6 +232,29 @@ pub fn view_monitor(number: usize, absolute: bool) -> Result<String, String> {
     let monitor_list = get_monitor_list(number)?;
 
     let table = as_table(&monitor_list, number, absolute);
+    Ok(table.to_string())
+}
+
+/// Send a view ledger request to the server
+pub fn view_ledger(absolute: bool) -> Result<String, String> {
+    // Get the response of the server communication
+    let monitor_list = get_monitor_list(0)?;
+
+    let mut link_set = HashSet::new();
+
+    for monitor in monitor_list {
+        let current_links = monitor.get_links().clone();
+        link_set.extend(current_links);
+    }
+
+    let link_list = Vec::from_iter(link_set);
+
+    if link_list.is_empty() {
+        return Err(String::from("No files are currently being tracked"));
+    }
+
+    let table = crate::link::as_table(&link_list, absolute);
+
     Ok(table.to_string())
 }
 

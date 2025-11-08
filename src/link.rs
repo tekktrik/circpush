@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 use filetime::{set_file_mtime, FileTime};
+use pathdiff::diff_paths;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-use std::fs;
 use std::fs::create_dir_all;
 use std::hash::Hash;
 use std::path::{Path, PathBuf};
-use tabled::Tabled;
+use std::{env, fs};
+use tabled::builder::Builder;
+use tabled::{Table, Tabled};
 
 /// Get the modification time for a file given the filepath
 fn get_file_mtime(path: &PathBuf) -> FileTime {
@@ -122,6 +124,36 @@ impl FileLink {
     pub fn delete(&self) -> std::io::Result<()> {
         fs::remove_file(&self.destination)
     }
+
+    /// Creates a table record from the FileLink for use with tabled, using either relative
+    /// or absolute paths
+    pub fn to_table_record(&self, absolute: bool) -> Vec<String> {
+        // Get the current path and use it to create relative paths for the base and write
+        // directories sif requested
+        let current_dir = env::current_dir().expect("Could not get current directory");
+        let source = if absolute {
+            &self.source
+        } else {
+            &diff_paths(&self.source, &current_dir).unwrap()
+        };
+        let destination = if absolute {
+            &self.destination
+        } else {
+            &diff_paths(&self.destination, &current_dir).unwrap()
+        };
+
+        // Return the list representation
+        vec![
+            source
+                .to_str()
+                .expect("Could not convert to string")
+                .to_owned(),
+            destination
+                .to_str()
+                .expect("Could not convert to string")
+                .to_owned(),
+        ]
+    }
 }
 
 impl Tabled for FileLink {
@@ -145,6 +177,21 @@ impl Tabled for FileLink {
     fn headers() -> Vec<std::borrow::Cow<'static, str>> {
         vec![Cow::Borrowed("Source"), Cow::Borrowed("Destination")]
     }
+}
+
+pub fn as_table(links: &[FileLink], absolute: bool) -> Table {
+    // Create a tabled table to be built and add the header row
+    let mut table_builder = Builder::default();
+    table_builder.push_record(FileLink::headers());
+
+    // For each FileLink returned, get the associated table record
+    for link in links {
+        let record = link.to_table_record(absolute);
+        table_builder.push_record(record);
+    }
+
+    // Return a built table
+    table_builder.build()
 }
 
 #[cfg(test)]

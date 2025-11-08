@@ -102,7 +102,11 @@ enum Command {
     },
     /// View all currently monitored files
     #[command(name = "ledger")]
-    LinkLedger,
+    LinkLedger {
+        /// Display the filepaths as absolute
+        #[arg(short, long)]
+        absolute: bool,
+    },
     /// Workspace-specific commands (e.g., save and load)
     #[command(subcommand)]
     Workspace(WorkspaceCommand),
@@ -125,6 +129,7 @@ enum ServerCommand {
     },
     /// Stop the server
     Stop,
+    Info,
 }
 
 /// FDSNJKFDSNJ
@@ -212,7 +217,7 @@ pub fn entry(cli_args: &[String]) -> Result<String, String> {
         Command::LinkView { number, absolute } => {
             crate::tcp::client::view_monitor(number, absolute)
         }
-        Command::LinkLedger => Err(String::from("WIP")),
+        Command::LinkLedger { absolute } => crate::tcp::client::view_ledger(absolute),
     }
 }
 
@@ -234,6 +239,7 @@ fn server_subentry(server_command: ServerCommand) -> Result<String, String> {
             crate::tcp::server::start_server(port)
         }
         ServerCommand::Stop => crate::tcp::client::stop_server(),
+        ServerCommand::Info => crate::tcp::client::get_server_info(),
     }
 }
 

@@ -195,6 +195,11 @@ impl FileMonitor {
         linkless.links.clear();
         linkless
     }
+
+    /// Get the links for this file monitor
+    pub fn get_links(&self) -> &HashSet<FileLink> {
+        &self.links
+    }
 }
 
 impl PartialEq for FileMonitor {
